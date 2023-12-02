@@ -204,9 +204,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: aarch64-apple-darwin
-      - uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "10.0"
       - name: Environment 
         # macOS 11 was the first version to support ARM
         run: |
