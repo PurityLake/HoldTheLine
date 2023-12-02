@@ -157,6 +157,9 @@ jobs:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
       - uses: actions/checkout@v4
+      - uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "10.0"
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: x86_64-apple-darwin
@@ -201,6 +204,9 @@ jobs:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
       - uses: actions/checkout@v4
+      - uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "10.0"
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: aarch64-apple-darwin
