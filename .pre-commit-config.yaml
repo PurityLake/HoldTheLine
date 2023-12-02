@@ -3,7 +3,7 @@ repos:
     rev: master
     hooks:
     -   id: fmt
-        args: ['-all', '--', '--check']
+        args: ['--all', '--', '--check']
     -   id: cargo-check
     -   id: clippy
         args: ['--', '-D', 'warnings']
