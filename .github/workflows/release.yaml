@@ -7,7 +7,7 @@ on:
 
 env:
   # update with the name of the main binary
-  binary: holdtheline
+  binary: hold-the-line
   add_binaries_to_github_release: true
   itch_target: cultist-games/hold-the-line
 
@@ -208,6 +208,11 @@ jobs:
         # macOS 11 was the first version to support ARM
         run: |
           export MACOSX_DEPLOYMENT_TARGET="11"
+      
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "10.0"
 
       - name: Build
         run: |
