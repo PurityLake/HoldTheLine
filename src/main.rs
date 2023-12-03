@@ -8,7 +8,7 @@ mod enemy;
 mod player;
 mod state;
 
-use bevy::{prelude::*, window::WindowTheme};
+use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowTheme};
 use enemy::EnemySpawnPlugin;
 use player::PlayerPlugin;
 use state::GameState;
@@ -24,6 +24,7 @@ struct AnimationTimer(Timer);
 
 fn main() {
     App::new()
+        .insert_resource(AssetMetaCheck::Never)
         .add_state::<GameState>()
         .add_plugins((
             DefaultPlugins
