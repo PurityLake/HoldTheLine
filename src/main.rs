@@ -4,24 +4,34 @@
 // Feel free to delete this line.
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
-use bevy::prelude::*;
+mod player;
+
+use bevy::{prelude::*, window::WindowTheme};
+use player::PlayerPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Hold The Line".into(),
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Hold The Line".into(),
+                    resolution: (800.0, 600.0).into(),
+                    resizable: false,
+                    window_theme: Some(WindowTheme::Dark),
+                    enabled_buttons: bevy::window::EnabledButtons {
+                        maximize: false,
+                        ..default()
+                    },
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
+            PlayerPlugin {},
+        ))
         .add_systems(Startup, setup)
         .run();
 }
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
-    commands.spawn(SpriteBundle {
-        ..Default::default()
-    });
 }
