@@ -4,10 +4,12 @@
 // Feel free to delete this line.
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
+mod enemy;
 mod player;
 mod state;
 
 use bevy::{prelude::*, window::WindowTheme};
+use enemy::EnemySpawnPlugin;
 use player::PlayerPlugin;
 use state::GameState;
 
@@ -29,7 +31,8 @@ fn main() {
                 }),
                 ..default()
             }),
-            PlayerPlugin {},
+            PlayerPlugin,
+            EnemySpawnPlugin,
         ))
         .add_systems(Startup, setup)
         .add_systems(Update, main_menu_input)
