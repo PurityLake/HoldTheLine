@@ -1,0 +1,13 @@
+{
+    "enemies": [
+        {
+            "demon": {
+                "tile-width": 12.0,
+                "tile-heihgt": 16.0,
+                "tile-padding": 12.0,
+                "walk": "sprites/demon_walk.png",
+                "die": "sprites/demon_die.png"
+            }
+        }
+    ]
+}
