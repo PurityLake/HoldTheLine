@@ -157,12 +157,9 @@ jobs:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
       - uses: actions/checkout@v4
-      - uses: JesseTG/rm@v1.0.3
+      - uses: KyleMayes/install-llvm-action@v1
         with:
-          path: /usr/local/bin/2to3
-      - uses: ConorMacBride/install-package@v1
-        with:
-          brew: llvm
+          version: "10.0"
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: x86_64-apple-darwin
@@ -207,12 +204,9 @@ jobs:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
       - uses: actions/checkout@v4
-      - uses: JesseTG/rm@v1.0.3
+      - uses: KyleMayes/install-llvm-action@v1
         with:
-          path: /usr/local/bin/2to3
-      - uses: ConorMacBride/install-package@v1
-        with:
-          brew: llvm
+          version: "10.0"
       - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: aarch64-apple-darwin
