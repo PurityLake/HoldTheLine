@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::state::GameState;
+
 #[derive(Component)]
 enum PlayerDirection {
     Up,
@@ -11,8 +13,11 @@ pub struct PlayerPlugin {}
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup)
-            .add_systems(Update, (move_player, handle_input));
+        app.add_systems(OnEnter(GameState::GamePlay), setup)
+            .add_systems(
+                Update,
+                (move_player, handle_input).run_if(in_state(GameState::GamePlay)),
+            );
     }
 }
 
