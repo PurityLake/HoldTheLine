@@ -157,6 +157,9 @@ jobs:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
       - uses: actions/checkout@v4
+      - uses: JesseTG/rm@v1.0.3
+        with:
+          path: /usr/local/bin/2to3
       - uses: ConorMacBride/install-package@v1
         with:
           brew: llvm
@@ -204,6 +207,9 @@ jobs:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
       - uses: actions/checkout@v4
+      - uses: JesseTG/rm@v1.0.3
+        with:
+          path: /usr/local/bin/2to3
       - uses: ConorMacBride/install-package@v1
         with:
           brew: llvm
