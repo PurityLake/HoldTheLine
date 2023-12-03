@@ -6,6 +6,7 @@
 
 mod animation;
 mod enemy;
+mod json;
 mod player;
 mod state;
 
@@ -21,7 +22,6 @@ struct AnimationTimer(Timer);
 fn main() {
     App::new()
         .insert_resource(AssetMetaCheck::Never)
-        .add_state::<GameState>()
         .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
@@ -42,6 +42,7 @@ fn main() {
             PlayerPlugin,
             EnemySpawnPlugin,
         ))
+        .add_state::<GameState>()
         .add_systems(Startup, setup)
         .add_systems(
             Update,
