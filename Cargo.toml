@@ -16,5 +16,5 @@ opt-level = 1
 opt-level = 3
 
 [dependencies]
-bevy = "0.12"
+bevy = { git = "https://github.com/bevyengine/bevy.git", branch = "main" }
 rand = "0.8.5"
