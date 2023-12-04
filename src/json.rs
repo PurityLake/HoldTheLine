@@ -2,32 +2,38 @@ use bevy::utils::thiserror;
 use bevy::{
     asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
     prelude::*,
+    reflect::TypePath,
     utils::BoxedFuture,
 };
 use serde::Deserialize;
 use thiserror::Error;
 
+#[derive(Asset, TypePath, Debug, Deserialize)]
+pub struct JsonAsset {
+    pub value: i32,
+}
+
 #[derive(Default)]
-pub struct CustomAssetLoader<A> {
-    pub _marker: std::marker::PhantomData<A>,
+pub struct JsonAssetLoader<A> {
+    pub marker: std::marker::PhantomData<A>,
 }
 
 #[non_exhaustive]
 #[derive(Debug, Error)]
-pub enum CustomAssetLoaderError {
+pub enum JsonAssetLoaderError {
     #[error("Could not load asset: {0}")]
     Io(#[from] std::io::Error),
     #[error("Could not parse JSON: {0}")]
     JsonParseError(#[from] serde_json::error::Error),
 }
 
-impl<A> AssetLoader for CustomAssetLoader<A>
+impl<A> AssetLoader for JsonAssetLoader<A>
 where
     for<'a> A: Deserialize<'a> + Asset,
 {
     type Asset = A;
     type Settings = ();
-    type Error = CustomAssetLoaderError;
+    type Error = JsonAssetLoaderError;
     fn load<'b>(
         &'b self,
         reader: &'b mut Reader,
@@ -37,7 +43,7 @@ where
         Box::pin(async move {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
-            let custom_asset: A = serde_json::de::from_slice::<A>(&bytes)?;
+            let custom_asset = serde_json::de::from_slice::<A>(&bytes)?;
             Ok(custom_asset)
         })
     }

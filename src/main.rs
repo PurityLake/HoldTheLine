@@ -10,7 +10,7 @@ mod json;
 mod player;
 mod state;
 
-use animation::AnimationIndicies;
+use animation::{AnimationIndicies, AnimationLoadPlugin};
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowTheme};
 use enemy::EnemySpawnPlugin;
 use player::PlayerPlugin;
@@ -41,6 +41,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
             PlayerPlugin,
             EnemySpawnPlugin,
+            AnimationLoadPlugin,
         ))
         .add_state::<GameState>()
         .add_systems(Startup, setup)
