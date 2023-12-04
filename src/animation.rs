@@ -11,19 +11,23 @@ pub struct AnimationIndicies {
 pub struct AnimationLoadPlugin;
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
-pub struct AnimationListAsset {
-    pub enemies: Vec<String>,
-    pub tile_width: i32,
-    pub tile_height: i32,
-    pub tile_padding: i32,
+pub struct AnimationData {
+    pub width: i32,
+    pub height: i32,
+    pub padding_x: i32,
+    pub padding_y: i32,
 }
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
-pub struct AnimationListAsset2 {
-    pub enemies: Vec<String>,
-    pub tile_width: i32,
-    pub tile_height: i32,
-    pub tile_padding: i32,
+pub struct AnimationEntry {
+    pub name: String,
+    pub walk: AnimationData,
+    pub die: AnimationData,
+}
+
+#[derive(Asset, TypePath, Debug, Deserialize, Default)]
+pub struct AnimationListAsset {
+    pub enemies: Vec<AnimationEntry>,
 }
 
 #[derive(Resource, Default)]
