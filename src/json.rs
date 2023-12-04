@@ -1,20 +1,36 @@
+use std::marker::PhantomData;
+
 use bevy::utils::thiserror;
 use bevy::{
     asset::{io::Reader, AssetLoader, AsyncReadExt, LoadContext},
     prelude::*,
-    reflect::TypePath,
     utils::BoxedFuture,
 };
 use serde::Deserialize;
 use thiserror::Error;
 
-#[derive(Asset, TypePath, Debug, Deserialize)]
-pub struct JsonAsset {
-    pub value: i32,
+#[derive(Default)]
+pub struct JsonPlugin<A> {
+    pub extensions: Vec<&'static str>,
+    pub marker: PhantomData<A>,
+}
+
+impl<A> Plugin for JsonPlugin<A>
+where
+    for<'a> A: Deserialize<'a> + Asset,
+{
+    fn build(&self, app: &mut App) {
+        app.init_asset::<A>()
+            .register_asset_loader(JsonAssetLoader::<A> {
+                extensions: self.extensions.clone(),
+                marker: PhantomData,
+            });
+    }
 }
 
 #[derive(Default)]
 pub struct JsonAssetLoader<A> {
+    pub extensions: Vec<&'static str>,
     pub marker: std::marker::PhantomData<A>,
 }
 
@@ -49,6 +65,6 @@ where
     }
 
     fn extensions(&self) -> &[&str] {
-        &["json"]
+        &self.extensions
     }
 }
