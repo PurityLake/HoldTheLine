@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rand::prelude::*;
 
-use crate::state::GameState;
+use crate::{animation::EnemyAnimations, state::GameState};
 
 pub struct EnemySpawnPlugin;
 
@@ -49,24 +49,28 @@ impl Plugin for EnemySpawnPlugin {
     }
 }
 
-fn spawn_enemy(time: Res<Time>, mut commands: Commands, mut spawn_data: ResMut<EnemySpawnData>) {
+fn spawn_enemy(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut spawn_data: ResMut<EnemySpawnData>,
+    enemy_anims: Res<EnemyAnimations>,
+) {
     if spawn_data.curr_time > spawn_data.spawn_time {
         if spawn_data.curr_spawned + 1 < spawn_data.max_spawn {
             let mut rng = thread_rng();
+            let anim = enemy_anims.enemies.get("demon").unwrap();
             commands.spawn((
-                SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgb(0.5, 0.0, 0.0),
-                        custom_size: Some(Vec2::new(40., 40.)),
-                        ..default()
-                    },
+                SpriteSheetBundle {
+                    texture_atlas: anim.walk_handle.clone(),
                     transform: Transform::from_translation(Vec3::new(
                         500.,
                         rng.gen_range(-250.0..250.0),
                         0.,
-                    )),
+                    ))
+                    .with_scale(Vec3::splat(3.0)),
                     ..default()
                 },
+                anim.clone(),
                 Enemy::default(),
             ));
             spawn_data.curr_spawned += 1;
