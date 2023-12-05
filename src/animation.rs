@@ -33,7 +33,7 @@ pub struct AnimationList {
 }
 
 #[allow(dead_code)]
-#[derive(Default, Clone)]
+#[derive(Default, Clone, PartialEq)]
 pub enum AnimState {
     #[default]
     Walking,
@@ -49,6 +49,7 @@ pub struct AnimationComponent {
     pub last: usize,
     pub name: String,
     pub timer: Timer,
+    pub dying_timer: Timer,
     pub state: AnimState,
 }
 
@@ -58,6 +59,7 @@ impl AnimationComponent {
         die: Handle<TextureAtlas>,
         name: String,
         timer: Timer,
+        dying_timer: Timer,
     ) -> Self {
         Self {
             walk_handle: walk,
@@ -66,6 +68,7 @@ impl AnimationComponent {
             last: 3,
             name: name.clone(),
             timer,
+            dying_timer,
             state: AnimState::default(),
         }
     }
@@ -146,6 +149,7 @@ fn load_animations(
                 texture_atlases.add(die_texture_atlas),
                 enemy.name.clone(),
                 Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
+                Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
             ),
         );
     }
@@ -158,6 +162,13 @@ fn animate_sprite(
 ) {
     for (mut sprite, mut anim) in &mut query {
         anim.timer.tick(time.delta());
+        if anim.state == AnimState::Dying && sprite.index == anim.last {
+            anim.dying_timer.tick(time.delta());
+            if anim.dying_timer.just_finished() {
+                anim.state = AnimState::Dead;
+            }
+            continue;
+        }
         if anim.timer.just_finished() {
             sprite.index = if sprite.index == anim.last {
                 anim.first

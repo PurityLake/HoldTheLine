@@ -1,22 +1,21 @@
 use bevy::prelude::*;
 use rand::prelude::*;
 
-use crate::{animation::EnemyAnimations, state::GameState};
+use crate::{
+    animation::{AnimState, AnimationComponent, EnemyAnimations},
+    state::GameState,
+};
 
 pub struct EnemySpawnPlugin;
 
 #[derive(Component)]
 struct Enemy {
-    alive: bool,
     speed: f32,
 }
 
 impl Default for Enemy {
     fn default() -> Self {
-        Self {
-            alive: true,
-            speed: 100.,
-        }
+        Self { speed: 100. }
     }
 }
 
@@ -81,12 +80,23 @@ fn spawn_enemy(
     }
 }
 
-fn move_enemies(time: Res<Time>, mut enemies: Query<(&mut Enemy, &mut Transform)>) {
-    for (mut enemy, mut transform) in enemies.iter_mut() {
-        if enemy.alive {
+fn move_enemies(
+    time: Res<Time>,
+    mut enemies: Query<(
+        &Enemy,
+        &mut Handle<TextureAtlas>,
+        &mut TextureAtlasSprite,
+        &mut Transform,
+        &mut AnimationComponent,
+    )>,
+) {
+    for (enemy, mut handle, mut atlas, mut transform, mut anim) in enemies.iter_mut() {
+        if anim.state == AnimState::Walking {
             transform.translation.x -= enemy.speed * time.delta_seconds();
             if transform.translation.x < 0. {
-                enemy.alive = false;
+                anim.state = AnimState::Dying;
+                atlas.index = 0;
+                *handle = anim.die_handle.clone();
             }
         }
     }
@@ -94,11 +104,11 @@ fn move_enemies(time: Res<Time>, mut enemies: Query<(&mut Enemy, &mut Transform)
 
 fn remove_enemies(
     mut commands: Commands,
-    enemies: Query<(Entity, &Enemy)>,
+    enemies: Query<(Entity, &AnimationComponent)>,
     mut spawn_data: ResMut<EnemySpawnData>,
 ) {
     for (entity, data) in enemies.iter() {
-        if !data.alive {
+        if data.state == AnimState::Dead {
             commands.entity(entity).despawn();
             spawn_data.curr_spawned -= 1;
         }
