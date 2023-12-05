@@ -10,14 +10,11 @@ mod json;
 mod player;
 mod state;
 
-use animation::{AnimationIndicies, AnimationLoadPlugin};
+use animation::AnimationLoadPlugin;
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowTheme};
 use enemy::EnemySpawnPlugin;
 use player::PlayerPlugin;
 use state::GameState;
-
-#[derive(Component, Deref, DerefMut)]
-struct AnimationTimer(Timer);
 
 fn main() {
     App::new()
@@ -47,58 +44,13 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (main_menu_input, animate_sprite).run_if(in_state(GameState::MainMenu)),
+            (main_menu_input).run_if(in_state(GameState::MainMenu)),
         )
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    let texture_handle = asset_server.load("sprites/demon_walk.png");
-    let texture_atlas = TextureAtlas::from_grid(
-        texture_handle,
-        Vec2::new(12., 16.),
-        4,
-        1,
-        Some(Vec2::new(12., 0.)),
-        None,
-    );
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
-    let animation_indicies = AnimationIndicies { first: 0, last: 3 };
+fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
-    commands.spawn((
-        SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            sprite: TextureAtlasSprite::new(animation_indicies.first),
-            transform: Transform::from_scale(Vec3::splat(6.0)),
-            ..default()
-        },
-        animation_indicies,
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-    ));
-}
-
-fn animate_sprite(
-    time: Res<Time>,
-    mut query: Query<(
-        &AnimationIndicies,
-        &mut AnimationTimer,
-        &mut TextureAtlasSprite,
-    )>,
-) {
-    for (indicies, mut timer, mut sprite) in &mut query {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            sprite.index = if sprite.index == indicies.last {
-                indicies.first
-            } else {
-                sprite.index + 1
-            };
-        }
-    }
 }
 
 fn main_menu_input(input: Res<Input<KeyCode>>, mut game_state: ResMut<NextState<GameState>>) {
