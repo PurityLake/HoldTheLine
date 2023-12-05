@@ -70,7 +70,7 @@ impl ToString for AnimState {
     fn to_string(&self) -> String {
         match self {
             AnimState::Walking => "walk".to_string(),
-            AnimState::Dying => "dying".to_string(),
+            AnimState::Dying => "die".to_string(),
             AnimState::Hurting => "hurt".to_string(),
             AnimState::Flashing => "flash".to_string(),
             AnimState::Dead => "dead".to_string(),
@@ -135,6 +135,11 @@ pub struct EnemyAnimations {
     pub enemies: HashMap<String, AnimationComponent>,
 }
 
+#[derive(Resource, Default)]
+pub struct PlayerAnimations {
+    pub players: HashMap<String, AnimationComponent>,
+}
+
 impl Plugin for AnimationLoadPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(JsonPlugin::<AnimationListAsset> {
@@ -143,6 +148,7 @@ impl Plugin for AnimationLoadPlugin {
         })
         .init_resource::<AnimationList>()
         .init_resource::<EnemyAnimations>()
+        .init_resource::<PlayerAnimations>()
         .add_systems(Startup, setup)
         .add_systems(
             Update,
@@ -217,7 +223,7 @@ fn load_player_animations(
     asset_server: Res<AssetServer>,
     anim_assets: ResMut<Assets<AnimationListAsset>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut enemy_anims: ResMut<EnemyAnimations>,
+    mut player_anims: ResMut<PlayerAnimations>,
 ) {
     let anim_list = anim_assets.get(&list.handle);
     if list.loaded_players || anim_list.is_none() {
@@ -225,13 +231,13 @@ fn load_player_animations(
     }
     let anim_list = anim_list.unwrap();
     let mut anim_map: HashMap<String, AnimationComponent> = HashMap::new();
-    for player in anim_list.enemies.iter() {
+    for player in anim_list.players.iter() {
         let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
-        for gender in &["m", "f"] {
+        for gender in &["m"] {
             for name in anim_list.player_anim_names.iter() {
                 let texture_handle: Handle<Image> = asset_server.load(format!(
                     "sprites/player/{0}/{1}_{2}.png",
-                    player.name, gender, name
+                    player.race, gender, name
                 ));
                 let texture_atlas = TextureAtlas::from_grid(
                     texture_handle,
@@ -251,10 +257,10 @@ fn load_player_animations(
             }
         }
         anim_map.insert(
-            player.name.clone(),
+            player.race.clone(),
             AnimationComponent::new(
                 image_handles,
-                player.name.clone(),
+                player.race.clone(),
                 Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
                 Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
                 Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
@@ -263,7 +269,7 @@ fn load_player_animations(
             ),
         );
     }
-    enemy_anims.enemies = anim_map;
+    player_anims.players = anim_map;
     list.loaded_players = true;
 }
 
