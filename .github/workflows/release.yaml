@@ -275,13 +275,11 @@ jobs:
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
         run: |
-          for channel in $(ls builds); do
-            ./butler push \
-                --fix-permissions \
-                --userversion="${{ steps.get_version.outputs.tag }}" \
-                builds/$channel/* \
-                ${{ env.itch_target }}:$channel
-          done
+          ./butler push \
+              --fix-permissions \
+              --userversion="${{ steps.get_version.outputs.tag }}" \
+              builds/wasm/* \
+              ${{ env.itch_target }}:wasm
         
 
   upload-others-to-itch:
@@ -313,9 +311,11 @@ jobs:
           BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
         run: |
           for channel in $(ls builds); do
-            ./butler push \
-                --fix-permissions \
-                --userversion="${{ steps.get_version.outputs.tag }}" \
-                builds/$channel/* \
-                ${{ env.itch_target }}:$channel
+            if [ "$channel" != "wasm" ]; then
+              ./butler push \
+                  --fix-permissions \
+                  --userversion="${{ steps.get_version.outputs.tag }}" \
+                  builds/$channel/* \
+                  ${{ env.itch_target }}:$channel
+            fi
           done
