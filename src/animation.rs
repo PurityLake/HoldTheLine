@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 
 use crate::json::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, render::view::VisibilitySystems};
 use serde::Deserialize;
 
 pub struct AnimationLoadPlugin;
@@ -38,6 +38,7 @@ pub enum AnimState {
     #[default]
     Walking,
     Dying,
+    Flashing,
     Dead,
 }
 
@@ -50,6 +51,9 @@ pub struct AnimationComponent {
     pub name: String,
     pub timer: Timer,
     pub dying_timer: Timer,
+    pub flashing_timer: Timer,
+    pub max_flashes: usize,
+    pub flash_count: usize,
     pub state: AnimState,
 }
 
@@ -60,6 +64,9 @@ impl AnimationComponent {
         name: String,
         timer: Timer,
         dying_timer: Timer,
+        flashing_timer: Timer,
+        max_flashes: usize,
+        flash_count: usize,
     ) -> Self {
         Self {
             walk_handle: walk,
@@ -69,6 +76,9 @@ impl AnimationComponent {
             name: name.clone(),
             timer,
             dying_timer,
+            flashing_timer,
+            max_flashes,
+            flash_count,
             state: AnimState::default(),
         }
     }
@@ -95,10 +105,12 @@ impl Plugin for AnimationLoadPlugin {
         .add_systems(
             Update,
             animate_sprite.run_if(state_exists_and_equals(crate::GameState::GamePlay)),
-        );
+        )
+        .add_systems(PostUpdate, dummy.after(VisibilitySystems::CheckVisibility));
     }
 }
 
+fn dummy() {}
 fn setup(asset_server: Res<AssetServer>, mut anim_list: ResMut<AnimationList>) {
     anim_list.handle = asset_server.load("sprites/list.animinfo.json");
 }
@@ -150,6 +162,9 @@ fn load_animations(
                 enemy.name.clone(),
                 Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
                 Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
+                Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
+                6,
+                0,
             ),
         );
     }
@@ -158,14 +173,33 @@ fn load_animations(
 
 fn animate_sprite(
     time: Res<Time>,
-    mut query: Query<(&mut TextureAtlasSprite, &mut AnimationComponent)>,
+    mut query: Query<(
+        &mut TextureAtlasSprite,
+        &mut AnimationComponent,
+        &mut Visibility,
+    )>,
 ) {
-    for (mut sprite, mut anim) in &mut query {
+    for (mut sprite, mut anim, mut visible) in &mut query {
         anim.timer.tick(time.delta());
         if anim.state == AnimState::Dying && sprite.index == anim.last {
             anim.dying_timer.tick(time.delta());
             if anim.dying_timer.just_finished() {
-                anim.state = AnimState::Dead;
+                anim.state = AnimState::Flashing;
+            }
+            continue;
+        }
+        if anim.state == AnimState::Flashing {
+            anim.flashing_timer.tick(time.delta());
+            if anim.flashing_timer.just_finished() {
+                anim.flash_count += 1;
+                match *visible {
+                    Visibility::Visible => *visible = Visibility::Hidden,
+                    Visibility::Hidden => *visible = Visibility::Visible,
+                    Visibility::Inherited => (),
+                }
+                if anim.flash_count >= anim.max_flashes {
+                    anim.state = AnimState::Dead;
+                }
             }
             continue;
         }

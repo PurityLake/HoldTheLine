@@ -67,6 +67,7 @@ fn spawn_enemy(
                         0.,
                     ))
                     .with_scale(Vec3::splat(3.0)),
+                    visibility: Visibility::Visible,
                     ..default()
                 },
                 anim.clone(),
