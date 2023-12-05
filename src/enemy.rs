@@ -60,7 +60,7 @@ fn spawn_enemy(
             let anim = enemy_anims.enemies.get("demon").unwrap();
             commands.spawn((
                 SpriteSheetBundle {
-                    texture_atlas: anim.walk_handle.clone(),
+                    texture_atlas: anim.get_handle().unwrap(),
                     transform: Transform::from_translation(Vec3::new(
                         500.,
                         rng.gen_range(-250.0..250.0),
@@ -97,7 +97,7 @@ fn move_enemies(
             if transform.translation.x < 0. {
                 anim.state = AnimState::Dying;
                 atlas.index = 0;
-                *handle = anim.die_handle.clone();
+                *handle = anim.get_handle().unwrap();
             }
         }
     }

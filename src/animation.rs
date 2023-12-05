@@ -15,15 +15,32 @@ pub struct AnimationData {
 }
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
-pub struct AnimationEntry {
+pub struct EnemyAnimationEntry {
     pub name: String,
     pub walk: AnimationData,
     pub die: AnimationData,
 }
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
+pub struct GenderAnimationData {
+    pub walk: AnimationData,
+    pub hurt: AnimationData,
+    pub die: AnimationData,
+}
+
+#[derive(Asset, TypePath, Debug, Deserialize, Default)]
+pub struct PlayerAnimationEntry {
+    pub race: String,
+    pub m: GenderAnimationData,
+    // pub f: GenderAnimationData,
+}
+
+#[derive(Asset, TypePath, Debug, Deserialize, Default)]
 pub struct AnimationListAsset {
-    pub enemies: Vec<AnimationEntry>,
+    pub enemy_anim_names: Vec<String>,
+    pub player_anim_names: Vec<String>,
+    pub enemies: Vec<EnemyAnimationEntry>,
+    pub players: Vec<PlayerAnimationEntry>,
 }
 
 #[derive(Resource, Default)]
@@ -37,6 +54,7 @@ pub struct AnimationList {
 pub enum AnimState {
     #[default]
     Walking,
+    Hurting,
     Dying,
     Flashing,
     Dead,
@@ -47,16 +65,28 @@ impl AnimState {
         match self {
             AnimState::Walking => true,
             AnimState::Dying => true,
+            AnimState::Hurting => true,
             AnimState::Flashing => false,
             AnimState::Dead => false,
         }
     }
 }
 
+impl ToString for AnimState {
+    fn to_string(&self) -> String {
+        match self {
+            AnimState::Walking => "walk".to_string(),
+            AnimState::Dying => "dying".to_string(),
+            AnimState::Hurting => "hurt".to_string(),
+            AnimState::Flashing => "flash".to_string(),
+            AnimState::Dead => "dead".to_string(),
+        }
+    }
+}
+
 #[derive(Component, Clone, Default)]
 pub struct AnimationComponent {
-    pub walk_handle: Handle<TextureAtlas>,
-    pub die_handle: Handle<TextureAtlas>,
+    pub image_handles: HashMap<String, Handle<TextureAtlas>>,
     pub first: usize,
     pub last: usize,
     pub name: String,
@@ -70,8 +100,7 @@ pub struct AnimationComponent {
 
 impl AnimationComponent {
     fn new(
-        walk: Handle<TextureAtlas>,
-        die: Handle<TextureAtlas>,
+        image_handles: HashMap<String, Handle<TextureAtlas>>,
         name: String,
         timer: Timer,
         dying_timer: Timer,
@@ -80,8 +109,7 @@ impl AnimationComponent {
         flash_count: usize,
     ) -> Self {
         Self {
-            walk_handle: walk,
-            die_handle: die,
+            image_handles,
             first: 0,
             last: 3,
             name: name.clone(),
@@ -91,6 +119,19 @@ impl AnimationComponent {
             max_flashes,
             flash_count,
             state: AnimState::default(),
+        }
+    }
+
+    pub fn get_handle(&self) -> Option<Handle<TextureAtlas>> {
+        if self.state.should_anim() {
+            Some(
+                self.image_handles
+                    .get(&self.state.to_string())
+                    .unwrap()
+                    .clone(),
+            )
+        } else {
+            None
         }
     }
 }
@@ -136,39 +177,30 @@ fn load_animations(
     if list.loaded || anim_list.is_none() {
         return;
     }
+    let anim_list = anim_list.unwrap();
     let mut anim_map: HashMap<String, AnimationComponent> = HashMap::new();
-    for enemy in anim_list.unwrap().enemies.iter() {
-        let walk_texture_handle: Handle<Image> =
-            asset_server.load(format!("sprites/{0}_walk.png", enemy.name));
-        let die_texture_handle: Handle<Image> =
-            asset_server.load(format!("sprites/{0}_die.png", enemy.name));
-        let walk_texture_atlas = TextureAtlas::from_grid(
-            walk_texture_handle,
-            Vec2::new(enemy.walk.width as f32, enemy.walk.height as f32),
-            4,
-            1,
-            Some(Vec2::new(
-                enemy.walk.padding_x as f32,
-                enemy.walk.padding_y as f32,
-            )),
-            None,
-        );
-        let die_texture_atlas = TextureAtlas::from_grid(
-            die_texture_handle,
-            Vec2::new(enemy.die.width as f32, enemy.die.height as f32),
-            4,
-            1,
-            Some(Vec2::new(
-                enemy.die.padding_x as f32,
-                enemy.die.padding_y as f32,
-            )),
-            None,
-        );
+    for enemy in anim_list.enemies.iter() {
+        let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
+        for name in anim_list.enemy_anim_names.iter() {
+            let texture_handle: Handle<Image> =
+                asset_server.load(format!("sprites/{0}_{1}.png", enemy.name, name));
+            let texture_atlas = TextureAtlas::from_grid(
+                texture_handle,
+                Vec2::new(enemy.walk.width as f32, enemy.walk.height as f32),
+                4,
+                1,
+                Some(Vec2::new(
+                    enemy.walk.padding_x as f32,
+                    enemy.walk.padding_y as f32,
+                )),
+                None,
+            );
+            image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
+        }
         anim_map.insert(
             enemy.name.clone(),
             AnimationComponent::new(
-                texture_atlases.add(walk_texture_atlas),
-                texture_atlases.add(die_texture_atlas),
+                image_handles,
                 enemy.name.clone(),
                 Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
                 Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
