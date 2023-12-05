@@ -7,7 +7,7 @@ use serde::Deserialize;
 pub struct AnimationLoadPlugin;
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
-pub struct AnimationData {
+pub struct TilesetData {
     pub width: i32,
     pub height: i32,
     pub padding_x: i32,
@@ -17,21 +17,13 @@ pub struct AnimationData {
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
 pub struct EnemyAnimationEntry {
     pub name: String,
-    pub walk: AnimationData,
-    pub die: AnimationData,
-}
-
-#[derive(Asset, TypePath, Debug, Deserialize, Default)]
-pub struct GenderAnimationData {
-    pub walk: AnimationData,
-    pub hurt: AnimationData,
-    pub die: AnimationData,
+    pub anim_names: Vec<String>,
 }
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
 pub struct PlayerAnimationEntry {
     pub race: String,
-    pub m: GenderAnimationData,
+    pub m: Vec<String>,
     // pub f: GenderAnimationData,
 }
 
@@ -39,6 +31,7 @@ pub struct PlayerAnimationEntry {
 pub struct AnimationListAsset {
     pub enemy_anim_names: Vec<String>,
     pub player_anim_names: Vec<String>,
+    pub tileset: TilesetData,
     pub enemies: Vec<EnemyAnimationEntry>,
     pub players: Vec<PlayerAnimationEntry>,
 }
@@ -46,7 +39,8 @@ pub struct AnimationListAsset {
 #[derive(Resource, Default)]
 pub struct AnimationList {
     handle: Handle<AnimationListAsset>,
-    loaded: bool,
+    loaded_enemies: bool,
+    loaded_players: bool,
 }
 
 #[allow(dead_code)]
@@ -152,7 +146,8 @@ impl Plugin for AnimationLoadPlugin {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            load_animations.run_if(state_exists_and_equals(crate::GameState::GamePlay)),
+            (load_player_animations, load_enemy_animations)
+                .run_if(state_exists_and_equals(crate::GameState::GamePlay)),
         )
         .add_systems(
             Update,
@@ -166,15 +161,15 @@ fn setup(asset_server: Res<AssetServer>, mut anim_list: ResMut<AnimationList>) {
     anim_list.handle = asset_server.load("sprites/list.animinfo.json");
 }
 
-fn load_animations(
-    list: ResMut<AnimationList>,
+fn load_enemy_animations(
+    mut list: ResMut<AnimationList>,
     asset_server: Res<AssetServer>,
     anim_assets: ResMut<Assets<AnimationListAsset>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut enemy_anims: ResMut<EnemyAnimations>,
 ) {
     let anim_list = anim_assets.get(&list.handle);
-    if list.loaded || anim_list.is_none() {
+    if list.loaded_enemies || anim_list.is_none() {
         return;
     }
     let anim_list = anim_list.unwrap();
@@ -186,12 +181,15 @@ fn load_animations(
                 asset_server.load(format!("sprites/{0}_{1}.png", enemy.name, name));
             let texture_atlas = TextureAtlas::from_grid(
                 texture_handle,
-                Vec2::new(enemy.walk.width as f32, enemy.walk.height as f32),
+                Vec2::new(
+                    anim_list.tileset.width as f32,
+                    anim_list.tileset.height as f32,
+                ),
                 4,
                 1,
                 Some(Vec2::new(
-                    enemy.walk.padding_x as f32,
-                    enemy.walk.padding_y as f32,
+                    anim_list.tileset.padding_x as f32,
+                    anim_list.tileset.padding_y as f32,
                 )),
                 None,
             );
@@ -211,6 +209,62 @@ fn load_animations(
         );
     }
     enemy_anims.enemies = anim_map;
+    list.loaded_enemies = true;
+}
+
+fn load_player_animations(
+    mut list: ResMut<AnimationList>,
+    asset_server: Res<AssetServer>,
+    anim_assets: ResMut<Assets<AnimationListAsset>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut enemy_anims: ResMut<EnemyAnimations>,
+) {
+    let anim_list = anim_assets.get(&list.handle);
+    if list.loaded_players || anim_list.is_none() {
+        return;
+    }
+    let anim_list = anim_list.unwrap();
+    let mut anim_map: HashMap<String, AnimationComponent> = HashMap::new();
+    for player in anim_list.enemies.iter() {
+        let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
+        for gender in &["m", "f"] {
+            for name in anim_list.player_anim_names.iter() {
+                let texture_handle: Handle<Image> = asset_server.load(format!(
+                    "sprites/player/{0}/{1}_{2}.png",
+                    player.name, gender, name
+                ));
+                let texture_atlas = TextureAtlas::from_grid(
+                    texture_handle,
+                    Vec2::new(
+                        anim_list.tileset.width as f32,
+                        anim_list.tileset.height as f32,
+                    ),
+                    4,
+                    1,
+                    Some(Vec2::new(
+                        anim_list.tileset.padding_x as f32,
+                        anim_list.tileset.padding_y as f32,
+                    )),
+                    None,
+                );
+                image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
+            }
+        }
+        anim_map.insert(
+            player.name.clone(),
+            AnimationComponent::new(
+                image_handles,
+                player.name.clone(),
+                Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
+                Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
+                Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
+                6,
+                0,
+            ),
+        );
+    }
+    enemy_anims.enemies = anim_map;
+    list.loaded_players = true;
 }
 
 fn animate_sprite(

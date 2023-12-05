@@ -8,46 +8,29 @@
         "hurt",
         "die"
     ],
+    "tileset": {
+        "width": 16,
+        "height": 16,
+        "padding_x": 0,
+        "padding_y": 0
+    },
     "enemies": [
         {
             "name": "demon",
-            "walk": {
-                "width": 16,
-                "height": 16,
-                "padding_x": 0,
-                "padding_y": 0
-            },
-            "die": {
-                "width": 16,
-                "height": 16,
-                "padding_x": 0,
-                "padding_y": 0
-            }
+            "anim_names": [
+                "walk",
+                "die"
+            ]
         }
     ],
     "players": [
         {
             "race": "human",
-            "m": {
-                "walk": {
-                    "width": 16,
-                    "height": 16,
-                    "padding_x": 0,
-                    "padding_y": 0
-                },
-                "hurt": {
-                    "width": 16,
-                    "height": 16,
-                    "padding_x": 0,
-                    "padding_y": 0
-                },
-                "die": {
-                    "width": 16,
-                    "height": 16,
-                    "padding_x": 0,
-                    "padding_y": 0
-                }
-            }
+            "m": [
+                "walk",
+                "hurt",
+                "die"
+            ]
         }
     ]
 }
