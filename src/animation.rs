@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 
 use crate::json::*;
-use bevy::{prelude::*, render::view::VisibilitySystems};
+use bevy::prelude::*;
 use serde::Deserialize;
 
 pub struct AnimationLoadPlugin;
@@ -40,6 +40,17 @@ pub enum AnimState {
     Dying,
     Flashing,
     Dead,
+}
+
+impl AnimState {
+    fn should_anim(&self) -> bool {
+        match self {
+            AnimState::Walking => true,
+            AnimState::Dying => true,
+            AnimState::Flashing => false,
+            AnimState::Dead => false,
+        }
+    }
 }
 
 #[derive(Component, Clone, Default)]
@@ -104,13 +115,12 @@ impl Plugin for AnimationLoadPlugin {
         )
         .add_systems(
             Update,
-            animate_sprite.run_if(state_exists_and_equals(crate::GameState::GamePlay)),
-        )
-        .add_systems(PostUpdate, dummy.after(VisibilitySystems::CheckVisibility));
+            (animate_sprite, flash_sprite)
+                .run_if(state_exists_and_equals(crate::GameState::GamePlay)),
+        );
     }
 }
 
-fn dummy() {}
 fn setup(asset_server: Res<AssetServer>, mut anim_list: ResMut<AnimationList>) {
     anim_list.handle = asset_server.load("sprites/list.animinfo.json");
 }
@@ -173,21 +183,31 @@ fn load_animations(
 
 fn animate_sprite(
     time: Res<Time>,
-    mut query: Query<(
-        &mut TextureAtlasSprite,
-        &mut AnimationComponent,
-        &mut Visibility,
-    )>,
+    mut query: Query<(&mut TextureAtlasSprite, &mut AnimationComponent)>,
 ) {
-    for (mut sprite, mut anim, mut visible) in &mut query {
-        anim.timer.tick(time.delta());
-        if anim.state == AnimState::Dying && sprite.index == anim.last {
-            anim.dying_timer.tick(time.delta());
-            if anim.dying_timer.just_finished() {
-                anim.state = AnimState::Flashing;
+    for (mut sprite, mut anim) in &mut query {
+        if anim.state.should_anim() {
+            anim.timer.tick(time.delta());
+            if anim.state == AnimState::Dying && sprite.index == anim.last {
+                anim.dying_timer.tick(time.delta());
+                if anim.dying_timer.just_finished() {
+                    anim.state = AnimState::Flashing;
+                }
+                continue;
             }
-            continue;
+            if anim.timer.just_finished() {
+                sprite.index = if sprite.index == anim.last {
+                    anim.first
+                } else {
+                    sprite.index + 1
+                };
+            }
         }
+    }
+}
+
+fn flash_sprite(time: Res<Time>, mut query: Query<(&mut AnimationComponent, &mut Visibility)>) {
+    for (mut anim, mut visible) in &mut query {
         if anim.state == AnimState::Flashing {
             anim.flashing_timer.tick(time.delta());
             if anim.flashing_timer.just_finished() {
@@ -201,14 +221,6 @@ fn animate_sprite(
                     anim.state = AnimState::Dead;
                 }
             }
-            continue;
-        }
-        if anim.timer.just_finished() {
-            sprite.index = if sprite.index == anim.last {
-                anim.first
-            } else {
-                sprite.index + 1
-            };
         }
     }
 }
