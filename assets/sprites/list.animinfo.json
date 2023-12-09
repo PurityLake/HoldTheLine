@@ -28,7 +28,8 @@
         "anim_names": [
             "walk",
             "hurt",
-            "die"
+            "die",
+            "idle"
         ]
     }
 }
