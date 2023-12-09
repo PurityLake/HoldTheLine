@@ -9,31 +9,41 @@ enum PlayerDirection {
     None,
 }
 
+#[derive(Resource, Default)]
+struct PlayerLoaded {
+    pub loaded: bool,
+}
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::GamePlay), setup)
-            .add_systems(
-                Update,
-                (move_player, handle_input).run_if(in_state(GameState::GamePlay)),
-            );
+        app.init_resource::<PlayerLoaded>().add_systems(
+            Update,
+            (setup, move_player, handle_input).run_if(in_state(GameState::GamePlay)),
+        );
     }
 }
 
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut player_loaded: ResMut<PlayerLoaded>,
+    player_anim: Res<crate::animation::PlayerAnimation>,
+) {
+    if player_loaded.loaded || !player_anim.loaded {
+        return;
+    }
     commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgb(0.5, 0.5, 0.5),
-                custom_size: Some(Vec2::new(40.0, 40.0)),
-                ..default()
-            },
-            transform: Transform::from_translation(Vec3::new(-350.0, 0.0, 0.0)),
+        SpriteSheetBundle {
+            texture_atlas: player_anim.player.get_handle().unwrap(),
+            transform: Transform::from_translation(Vec3::new(-350.0, 0.0, 0.0))
+                .with_scale(Vec3::splat(2.0)),
             ..default()
         },
+        player_anim.player.clone(),
         PlayerDirection::None,
     ));
+    player_loaded.loaded = true;
 }
 
 fn move_player(time: Res<Time>, mut player_pos: Query<(&PlayerDirection, &mut Transform)>) {
@@ -47,12 +57,14 @@ fn move_player(time: Res<Time>, mut player_pos: Query<(&PlayerDirection, &mut Tr
 }
 
 fn handle_input(input: Res<Input<KeyCode>>, mut player: Query<&mut PlayerDirection>) {
-    let mut dir = player.get_single_mut().unwrap();
-    if input.pressed(KeyCode::W) {
-        *dir = PlayerDirection::Up
-    } else if input.pressed(KeyCode::S) {
-        *dir = PlayerDirection::Down
-    } else {
-        *dir = PlayerDirection::None
+    let dir = player.get_single_mut();
+    if let Ok(mut dir) = dir {
+        if input.pressed(KeyCode::W) {
+            *dir = PlayerDirection::Up
+        } else if input.pressed(KeyCode::S) {
+            *dir = PlayerDirection::Down
+        } else {
+            *dir = PlayerDirection::None
+        }
     }
 }
