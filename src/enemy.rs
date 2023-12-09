@@ -66,7 +66,7 @@ fn spawn_enemy(
                         rng.gen_range(-250.0..250.0),
                         0.,
                     ))
-                    .with_scale(Vec3::splat(3.0)),
+                    .with_scale(Vec3::splat(2.0)),
                     visibility: Visibility::Visible,
                     ..default()
                 },
