@@ -136,6 +136,7 @@ pub struct EnemyAnimations {
 
 #[derive(Resource, Default)]
 pub struct PlayerAnimation {
+    pub loaded: bool,
     pub player: AnimationComponent,
 }
 
@@ -259,6 +260,7 @@ fn load_player_animations(
         6,
         0,
     );
+    player_anim.loaded = true;
     list.loaded_players = true;
 }
 
