@@ -23,14 +23,12 @@
             ]
         }
     ],
-    "players": [
-        {
-            "race": "human",
-            "m": [
-                "walk",
-                "hurt",
-                "die"
-            ]
-        }
-    ]
+    "player": {
+        "name": "player",
+        "anim_names": [
+            "walk",
+            "hurt",
+            "die"
+        ]
+    }
 }
