@@ -47,6 +47,7 @@ pub struct AnimationList {
 pub enum AnimState {
     #[default]
     Walking,
+    Idle,
     Hurting,
     Dying,
     Flashing,
@@ -57,6 +58,7 @@ impl AnimState {
     fn should_anim(&self) -> bool {
         match self {
             AnimState::Walking => true,
+            AnimState::Idle => true,
             AnimState::Dying => true,
             AnimState::Hurting => true,
             AnimState::Flashing => false,
@@ -69,6 +71,7 @@ impl ToString for AnimState {
     fn to_string(&self) -> String {
         match self {
             AnimState::Walking => "walk".to_string(),
+            AnimState::Idle => "idle".to_string(),
             AnimState::Dying => "die".to_string(),
             AnimState::Hurting => "hurt".to_string(),
             AnimState::Flashing => "flash".to_string(),
@@ -100,6 +103,7 @@ impl AnimationComponent {
         flashing_timer: Timer,
         max_flashes: usize,
         flash_count: usize,
+        state: AnimState,
     ) -> Self {
         Self {
             image_handles,
@@ -111,7 +115,7 @@ impl AnimationComponent {
             flashing_timer,
             max_flashes,
             flash_count,
-            state: AnimState::default(),
+            state,
         }
     }
 
@@ -184,7 +188,7 @@ fn load_enemy_animations(
         let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
         for name in anim_list.enemy_anim_names.iter() {
             let texture_handle: Handle<Image> =
-                asset_server.load(format!("sprites/{0}_{1}.png", enemy.name, name));
+                asset_server.load(format!("sprites/enemies/{0}_{1}.png", enemy.name, name));
             let texture_atlas = TextureAtlas::from_grid(
                 texture_handle,
                 Vec2::new(
@@ -211,6 +215,7 @@ fn load_enemy_animations(
                 Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
                 6,
                 0,
+                AnimState::default(),
             ),
         );
     }
@@ -232,7 +237,8 @@ fn load_player_animations(
     let anim_list = anim_list.unwrap();
     let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
     let player = &anim_list.player;
-    for name in anim_list.player_anim_names.iter() {
+    for name in player.anim_names.iter() {
+        println!("{}", name);
         let texture_handle: Handle<Image> =
             asset_server.load(format!("sprites/player/hero_{0}.png", name));
         let texture_atlas = TextureAtlas::from_grid(
@@ -259,6 +265,7 @@ fn load_player_animations(
         Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
         6,
         0,
+        AnimState::Idle,
     );
     player_anim.loaded = true;
     list.loaded_players = true;
