@@ -238,7 +238,6 @@ fn load_player_animations(
     let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
     let player = &anim_list.player;
     for name in player.anim_names.iter() {
-        println!("{}", name);
         let texture_handle: Handle<Image> =
             asset_server.load(format!("sprites/player/hero_{0}.png", name));
         let texture_atlas = TextureAtlas::from_grid(
