@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 
 use crate::{
@@ -17,15 +19,42 @@ struct PlayerLoaded {
     pub loaded: bool,
 }
 
+#[derive(Resource)]
+struct PlayerAttackTimer {
+    pub timer: Timer,
+    pub attacked: bool,
+}
+
+impl Default for PlayerAttackTimer {
+    fn default() -> Self {
+        Self {
+            timer: Timer::new(Duration::from_secs_f32(0.75), TimerMode::Once),
+            attacked: false,
+        }
+    }
+}
+
+#[derive(Component, Default)]
+struct PlayerAttack;
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<PlayerLoaded>().add_systems(
-            Update,
-            (setup, move_player, handle_input, change_player_anim)
-                .run_if(in_state(GameState::GamePlay)),
-        );
+        app.init_resource::<PlayerLoaded>()
+            .insert_resource(PlayerAttackTimer::default())
+            .add_systems(
+                Update,
+                (
+                    setup,
+                    move_player,
+                    handle_input,
+                    change_player_anim,
+                    update_attack,
+                    tick_attack_timer,
+                )
+                    .run_if(in_state(GameState::GamePlay)),
+            );
     }
 }
 
@@ -96,15 +125,63 @@ fn change_player_anim(
     }
 }
 
-fn handle_input(input: Res<Input<KeyCode>>, mut player: Query<&mut PlayerDirection>) {
-    let dir = player.get_single_mut();
-    if let Ok(mut dir) = dir {
+fn tick_attack_timer(time: Res<Time>, mut timer: ResMut<PlayerAttackTimer>) {
+    timer.timer.tick(time.delta());
+    if timer.timer.just_finished() {
+        timer.attacked = false;
+    }
+}
+
+fn handle_input(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    input: Res<Input<KeyCode>>,
+    mut player_attack_timer: ResMut<PlayerAttackTimer>,
+    mut player: Query<(&mut PlayerDirection, &Transform)>,
+) {
+    let query = player.get_single_mut();
+    if let Ok((mut dir, tranform)) = query {
         if input.pressed(KeyCode::W) {
             *dir = PlayerDirection::Up
         } else if input.pressed(KeyCode::S) {
             *dir = PlayerDirection::Down
         } else {
             *dir = PlayerDirection::None
+        }
+
+        if input.pressed(KeyCode::Space) && !player_attack_timer.attacked {
+            player_attack_timer.attacked = true;
+            player_attack_timer.timer.reset();
+            commands.spawn((
+                SpriteBundle {
+                    texture: asset_server.load("sprites/other/player_attack.png"),
+                    transform: Transform::from_translation(Vec3::new(
+                        tranform.translation.x + 5.0,
+                        tranform.translation.y,
+                        0.0,
+                    ))
+                    .with_scale(Vec3::splat(0.75)),
+                    ..default()
+                },
+                PlayerAttack,
+            ));
+        }
+    }
+}
+
+fn update_attack(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Transform, &PlayerAttack)>,
+) {
+    for (entity, mut transform, _) in &mut query {
+        transform.scale = transform
+            .scale
+            .lerp(Vec3::splat(2.0), time.delta_seconds() * 2.0);
+
+        transform.translation.x += 150.0 * time.delta_seconds();
+        if transform.translation.x > 450.0 {
+            commands.entity(entity).despawn();
         }
     }
 }
