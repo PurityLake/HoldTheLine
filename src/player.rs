@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 use crate::{
     animation::{AnimState, AnimationComponent, PlayerAnimation},
@@ -75,6 +76,9 @@ fn setup(
         },
         player_anim.player.clone(),
         PlayerDirection::None,
+        RigidBody::KinematicPositionBased,
+        Collider::cuboid(6.0, 7.0),
+        Sensor,
     ));
     player_loaded.loaded = true;
 }
@@ -140,7 +144,7 @@ fn handle_input(
     mut player: Query<(&mut PlayerDirection, &Transform)>,
 ) {
     let query = player.get_single_mut();
-    if let Ok((mut dir, tranform)) = query {
+    if let Ok((mut dir, transform)) = query {
         if input.pressed(KeyCode::W) {
             *dir = PlayerDirection::Up
         } else if input.pressed(KeyCode::S) {
@@ -156,14 +160,17 @@ fn handle_input(
                 SpriteBundle {
                     texture: asset_server.load("sprites/other/player_attack.png"),
                     transform: Transform::from_translation(Vec3::new(
-                        tranform.translation.x + 5.0,
-                        tranform.translation.y,
+                        transform.translation.x + 5.0,
+                        transform.translation.y,
                         0.0,
                     ))
                     .with_scale(Vec3::splat(0.75)),
                     ..default()
                 },
                 PlayerAttack,
+                RigidBody::KinematicPositionBased,
+                Collider::capsule_y(10.0, 6.0),
+                Sensor,
             ));
         }
     }

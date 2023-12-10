@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use rand::prelude::*;
 
 use crate::{
@@ -72,6 +73,9 @@ fn spawn_enemy(
                 },
                 anim.clone(),
                 Enemy::default(),
+                RigidBody::KinematicPositionBased,
+                Collider::cuboid(6.0, 7.0),
+                Sensor,
             ));
             spawn_data.curr_spawned += 1;
             spawn_data.curr_time = 0.;

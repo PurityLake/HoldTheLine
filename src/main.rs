@@ -12,6 +12,7 @@ mod state;
 
 use animation::AnimationLoadPlugin;
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowTheme};
+use bevy_rapier2d::prelude::*;
 use enemy::EnemySpawnPlugin;
 use player::PlayerPlugin;
 use state::GameState;
@@ -39,6 +40,9 @@ fn main() {
             PlayerPlugin,
             EnemySpawnPlugin,
             AnimationLoadPlugin,
+            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+            #[cfg(debug_assertions)]
+            RapierDebugRenderPlugin::default(),
         ))
         .add_state::<GameState>()
         .add_systems(Startup, setup)
