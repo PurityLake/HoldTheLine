@@ -8,7 +8,8 @@
             "args": [
                 "run",
                 "--features",
-                "bevy/dynamic_linking"
+                "bevy/dynamic_linking",
+                "bevy_rapier2d/debug-render-2d"
             ],
             "problemMatcher": [],
             "group": {
