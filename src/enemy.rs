@@ -1,11 +1,14 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use rand::prelude::*;
 
 use crate::{
-    animation::{AnimState, AnimationComponent, EnemyAnimations},
+    animation::{
+        AnimState, AnimationComponent, AnimationHandles, AnimationList, AnimationListAsset,
+        EnemyAnimations, ImagesToLoad,
+    },
     state::GameState,
     GameplayStart,
 };
@@ -44,16 +47,21 @@ impl Default for EnemySpawnData {
 
 impl Plugin for EnemySpawnPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(EnemySpawnData::default()).add_systems(
-            Update,
-            (
-                move_enemies,
-                spawn_enemy,
-                remove_enemies,
-                react_to_collision,
+        app.insert_resource(EnemySpawnData::default())
+            .add_systems(
+                Update,
+                (
+                    move_enemies,
+                    spawn_enemy,
+                    remove_enemies,
+                    react_to_collision,
+                )
+                    .run_if(in_state(GameState::GamePlay)),
             )
-                .run_if(in_state(GameState::GamePlay)),
-        );
+            .add_systems(
+                Update,
+                load_enemy_animations.run_if(in_state(GameState::Loading)),
+            );
     }
 }
 
@@ -161,4 +169,43 @@ fn react_to_collision(
             }
         }
     }
+}
+
+fn load_enemy_animations(
+    mut list: ResMut<AnimationList>,
+    asset_server: Res<AssetServer>,
+    anim_assets: ResMut<Assets<AnimationListAsset>>,
+    mut images_to_load: ResMut<ImagesToLoad>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut enemy_anims: ResMut<EnemyAnimations>,
+) {
+    if !asset_server.is_loaded_with_dependencies(&list.handle) {
+        return;
+    }
+    let anim_list = anim_assets.get(&list.handle);
+    let anim_list = anim_list.unwrap();
+    let mut anim_map: HashMap<String, AnimationHandles> = HashMap::new();
+    for enemy in anim_list.enemies.iter() {
+        let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
+        for name in enemy.anim_names.iter() {
+            let texture_handle: Handle<Image> =
+                asset_server.load(format!("sprites/enemies/{0}_{1}.png", enemy.name, name));
+            images_to_load.images.push(texture_handle.id());
+            let texture_atlas = TextureAtlas::from_grid(
+                texture_handle,
+                Vec2::new(anim_list.tileset.width as f32, enemy.height),
+                4,
+                1,
+                Some(Vec2::new(
+                    anim_list.tileset.padding_x as f32,
+                    anim_list.tileset.padding_y as f32,
+                )),
+                None,
+            );
+            image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
+        }
+        anim_map.insert(enemy.name.clone(), AnimationHandles::new(image_handles));
+    }
+    enemy_anims.enemies = anim_map;
+    list.loaded_enemies = true;
 }

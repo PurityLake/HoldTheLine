@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    animation::{AnimState, AnimationComponent, ImagesToLoad, PlayerAnimation},
+    animation::{
+        AnimState, AnimationComponent, AnimationList, AnimationListAsset, ImagesToLoad,
+        PlayerAnimation,
+    },
     state::GameState,
     GameplayStart,
 };
@@ -85,6 +88,10 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 slide_in_player.run_if(in_state(GameState::TransitionToGamePlay)),
+            )
+            .add_systems(
+                Update,
+                load_player_animations.run_if(in_state(GameState::Loading)),
             )
             .add_systems(Update, add_collisions.run_if(in_state(GameState::GamePlay)))
             .add_systems(
@@ -375,4 +382,44 @@ fn react_to_player_collision(
             }
         }
     }
+}
+
+fn load_player_animations(
+    mut list: ResMut<AnimationList>,
+    asset_server: Res<AssetServer>,
+    anim_assets: ResMut<Assets<AnimationListAsset>>,
+    mut images_to_load: ResMut<ImagesToLoad>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut player_anim: ResMut<PlayerAnimation>,
+) {
+    if !asset_server.is_loaded_with_dependencies(&list.handle) {
+        return;
+    }
+    let anim_list = anim_assets.get(&list.handle);
+    let anim_list = anim_list.unwrap();
+    let player = &anim_list.player;
+    for name in player.anim_names.iter() {
+        let texture_handle: Handle<Image> =
+            asset_server.load(format!("sprites/player/hero_{0}.png", name));
+        images_to_load.images.push(texture_handle.id());
+        let texture_atlas = TextureAtlas::from_grid(
+            texture_handle,
+            Vec2::new(
+                anim_list.tileset.width as f32,
+                anim_list.tileset.height as f32,
+            ),
+            4,
+            1,
+            Some(Vec2::new(
+                anim_list.tileset.padding_x as f32,
+                anim_list.tileset.padding_y as f32,
+            )),
+            None,
+        );
+        player_anim
+            .anims
+            .add_handle(name.clone(), texture_atlases.add(texture_atlas));
+    }
+    player_anim.loaded = true;
+    list.loaded_players = true;
 }

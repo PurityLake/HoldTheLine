@@ -36,9 +36,9 @@ pub struct AnimationListAsset {
 
 #[derive(Resource, Default)]
 pub struct AnimationList {
-    handle: Handle<AnimationListAsset>,
-    loaded_enemies: bool,
-    loaded_players: bool,
+    pub handle: Handle<AnimationListAsset>,
+    pub loaded_enemies: bool,
+    pub loaded_players: bool,
 }
 
 impl AnimationList {
@@ -98,12 +98,20 @@ pub struct AnimationHandles {
 }
 
 impl AnimationHandles {
+    pub fn new(handles: HashMap<String, Handle<TextureAtlas>>) -> Self {
+        Self { handles }
+    }
+
     pub fn get_handle(&self, state: AnimState) -> Option<Handle<TextureAtlas>> {
         if state.should_anim() {
             Some(self.handles.get(&state.to_string()).unwrap().clone())
         } else {
             None
         }
+    }
+
+    pub fn add_handle(&mut self, key: String, handle: Handle<TextureAtlas>) {
+        self.handles.insert(key, handle);
     }
 }
 
@@ -170,11 +178,7 @@ impl Plugin for AnimationLoadPlugin {
         .init_resource::<PlayerAnimation>()
         .init_resource::<ImagesToLoad>()
         .add_systems(Startup, setup)
-        .add_systems(
-            Update,
-            (load_enemy_animations, load_player_animations, stop_waiting)
-                .run_if(in_state(GameState::Loading)),
-        )
+        .add_systems(Update, stop_waiting.run_if(in_state(GameState::Loading)))
         .add_systems(
             Update,
             wait_for_assets_to_load.run_if(in_state(GameState::Waiting)),
@@ -201,90 +205,6 @@ fn stop_waiting(
     if list.is_loaded() {
         next_state.set(state.transition());
     }
-}
-
-fn load_enemy_animations(
-    mut list: ResMut<AnimationList>,
-    asset_server: Res<AssetServer>,
-    anim_assets: ResMut<Assets<AnimationListAsset>>,
-    mut images_to_load: ResMut<ImagesToLoad>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut enemy_anims: ResMut<EnemyAnimations>,
-) {
-    if !asset_server.is_loaded_with_dependencies(&list.handle) {
-        return;
-    }
-    let anim_list = anim_assets.get(&list.handle);
-    let anim_list = anim_list.unwrap();
-    let mut anim_map: HashMap<String, AnimationHandles> = HashMap::new();
-    for enemy in anim_list.enemies.iter() {
-        let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
-        for name in enemy.anim_names.iter() {
-            let texture_handle: Handle<Image> =
-                asset_server.load(format!("sprites/enemies/{0}_{1}.png", enemy.name, name));
-            images_to_load.images.push(texture_handle.id());
-            let texture_atlas = TextureAtlas::from_grid(
-                texture_handle,
-                Vec2::new(anim_list.tileset.width as f32, enemy.height),
-                4,
-                1,
-                Some(Vec2::new(
-                    anim_list.tileset.padding_x as f32,
-                    anim_list.tileset.padding_y as f32,
-                )),
-                None,
-            );
-            image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
-        }
-        anim_map.insert(
-            enemy.name.clone(),
-            AnimationHandles {
-                handles: image_handles,
-            },
-        );
-    }
-    enemy_anims.enemies = anim_map;
-    list.loaded_enemies = true;
-}
-
-fn load_player_animations(
-    mut list: ResMut<AnimationList>,
-    asset_server: Res<AssetServer>,
-    anim_assets: ResMut<Assets<AnimationListAsset>>,
-    mut images_to_load: ResMut<ImagesToLoad>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut player_anim: ResMut<PlayerAnimation>,
-) {
-    if !asset_server.is_loaded_with_dependencies(&list.handle) {
-        return;
-    }
-    let anim_list = anim_assets.get(&list.handle);
-    let anim_list = anim_list.unwrap();
-    let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
-    let player = &anim_list.player;
-    for name in player.anim_names.iter() {
-        let texture_handle: Handle<Image> =
-            asset_server.load(format!("sprites/player/hero_{0}.png", name));
-        images_to_load.images.push(texture_handle.id());
-        let texture_atlas = TextureAtlas::from_grid(
-            texture_handle,
-            Vec2::new(
-                anim_list.tileset.width as f32,
-                anim_list.tileset.height as f32,
-            ),
-            4,
-            1,
-            Some(Vec2::new(
-                anim_list.tileset.padding_x as f32,
-                anim_list.tileset.padding_y as f32,
-            )),
-            None,
-        );
-        image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
-    }
-    player_anim.anims.handles = image_handles;
-    player_anim.loaded = true;
-    list.loaded_players = true;
 }
 
 fn animate_sprite(
