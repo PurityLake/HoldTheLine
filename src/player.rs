@@ -132,7 +132,7 @@ fn slide_in_player(
         &mut AnimationComponent,
     )>,
 ) {
-    if !gameplay_start.play_inplace {
+    if !gameplay_start.play_inplace || !player_anim.loaded {
         for (_, mut player_transform, mut handle, mut anim) in player.iter_mut() {
             if anim.state == AnimState::Idle {
                 anim.state = AnimState::Walking;
@@ -150,11 +150,10 @@ fn slide_in_player(
 
 fn move_player(
     time: Res<Time>,
-    player_loaded: Res<PlayerLoaded>,
     player_anim: Res<PlayerAnimation>,
     mut player_pos: Query<(&PlayerDirection, &mut Transform)>,
 ) {
-    if !player_loaded.loaded || !player_anim.loaded {
+    if !player_anim.loaded {
         return;
     }
     for (dir, mut transform) in &mut player_pos {
@@ -167,7 +166,6 @@ fn move_player(
 }
 
 fn change_player_anim(
-    player_loaded: Res<PlayerLoaded>,
     player_anim: Res<PlayerAnimation>,
     mut player: Query<(
         &PlayerDirection,
@@ -176,7 +174,7 @@ fn change_player_anim(
         &mut AnimationComponent,
     )>,
 ) {
-    if !player_loaded.loaded {
+    if !player_anim.loaded {
         return;
     }
     if let Ok((dir, mut handle, sprite, mut anim)) = player.get_single_mut() {
