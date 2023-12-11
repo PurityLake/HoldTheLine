@@ -49,7 +49,7 @@ impl AnimationList {
 }
 
 #[allow(dead_code)]
-#[derive(Default, Clone, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq)]
 pub enum AnimState {
     #[default]
     Walking,
@@ -93,12 +93,25 @@ impl ToString for AnimState {
     }
 }
 
-#[derive(Component, Clone, Default)]
+#[derive(Default)]
+pub struct AnimationHandles {
+    handles: HashMap<String, Handle<TextureAtlas>>,
+}
+
+impl AnimationHandles {
+    pub fn get_handle(&self, state: AnimState) -> Option<Handle<TextureAtlas>> {
+        if state.should_anim() {
+            Some(self.handles.get(&state.to_string()).unwrap().clone())
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Component)]
 pub struct AnimationComponent {
-    pub image_handles: HashMap<String, Handle<TextureAtlas>>,
     pub first: usize,
     pub last: usize,
-    pub name: String,
     pub timer: Timer,
     pub dying_timer: Timer,
     pub flashing_timer: Timer,
@@ -108,53 +121,43 @@ pub struct AnimationComponent {
 }
 
 impl AnimationComponent {
-    fn new(
-        image_handles: HashMap<String, Handle<TextureAtlas>>,
-        name: String,
-        timer: Timer,
-        dying_timer: Timer,
-        flashing_timer: Timer,
-        max_flashes: usize,
-        flash_count: usize,
-        state: AnimState,
-    ) -> Self {
+    pub fn new(state: AnimState) -> Self {
         Self {
-            image_handles,
-            first: 0,
-            last: 3,
-            name: name.clone(),
-            timer,
-            dying_timer,
-            flashing_timer,
-            max_flashes,
-            flash_count,
             state,
+            ..Default::default()
         }
     }
+}
 
-    pub fn get_handle(&self) -> Option<Handle<TextureAtlas>> {
-        if self.state.should_anim() {
-            Some(
-                self.image_handles
-                    .get(&self.state.to_string())
-                    .unwrap()
-                    .clone(),
-            )
-        } else {
-            None
+impl Default for AnimationComponent {
+    fn default() -> Self {
+        Self {
+            first: 0,
+            last: 3,
+            timer: Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
+            dying_timer: Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
+            flashing_timer: Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
+            max_flashes: 6,
+            flash_count: 0,
+            state: AnimState::default(),
         }
     }
 }
 
 #[derive(Resource, Default)]
+pub struct ImagesToLoad {
+    pub images: Vec<AssetId<Image>>,
+}
+
+#[derive(Resource, Default)]
 pub struct EnemyAnimations {
-    pub enemies: HashMap<String, AnimationComponent>,
+    pub enemies: HashMap<String, AnimationHandles>,
 }
 
 #[derive(Resource, Default)]
 pub struct PlayerAnimation {
     pub loaded: bool,
-    pub player: AnimationComponent,
+    pub anims: AnimationHandles,
 }
 
 impl Plugin for AnimationLoadPlugin {
@@ -166,10 +169,16 @@ impl Plugin for AnimationLoadPlugin {
         .init_resource::<AnimationList>()
         .init_resource::<EnemyAnimations>()
         .init_resource::<PlayerAnimation>()
+        .init_resource::<ImagesToLoad>()
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (load_player_animations, load_enemy_animations).run_if(in_state(GameState::MainMenu)),
+            (load_enemy_animations, load_player_animations, stop_waiting)
+                .run_if(in_state(GameState::Loading)),
+        )
+        .add_systems(
+            Update,
+            wait_for_assets_to_load.run_if(in_state(GameState::Waiting)),
         )
         .add_systems(
             Update,
@@ -178,28 +187,43 @@ impl Plugin for AnimationLoadPlugin {
     }
 }
 
-fn setup(asset_server: Res<AssetServer>, mut anim_list: ResMut<AnimationList>) {
-    anim_list.handle = asset_server.load("sprites/list.animinfo.json");
+fn setup(mut list: ResMut<AnimationList>, asset_server: Res<AssetServer>) {
+    if list.is_loaded() {
+        return;
+    }
+    list.handle = asset_server.load("sprites/list.animinfo.json");
+}
+
+fn stop_waiting(
+    list: ResMut<AnimationList>,
+    state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if list.is_loaded() {
+        next_state.set(state.transition());
+    }
 }
 
 fn load_enemy_animations(
     mut list: ResMut<AnimationList>,
     asset_server: Res<AssetServer>,
     anim_assets: ResMut<Assets<AnimationListAsset>>,
+    mut images_to_load: ResMut<ImagesToLoad>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut enemy_anims: ResMut<EnemyAnimations>,
 ) {
-    let anim_list = anim_assets.get(&list.handle);
-    if list.loaded_enemies || anim_list.is_none() {
+    if !asset_server.is_loaded_with_dependencies(&list.handle) {
         return;
     }
+    let anim_list = anim_assets.get(&list.handle);
     let anim_list = anim_list.unwrap();
-    let mut anim_map: HashMap<String, AnimationComponent> = HashMap::new();
+    let mut anim_map: HashMap<String, AnimationHandles> = HashMap::new();
     for enemy in anim_list.enemies.iter() {
         let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
         for name in anim_list.enemy_anim_names.iter() {
             let texture_handle: Handle<Image> =
                 asset_server.load(format!("sprites/enemies/{0}_{1}.png", enemy.name, name));
+            images_to_load.images.push(texture_handle.id());
             let texture_atlas = TextureAtlas::from_grid(
                 texture_handle,
                 Vec2::new(
@@ -218,16 +242,9 @@ fn load_enemy_animations(
         }
         anim_map.insert(
             enemy.name.clone(),
-            AnimationComponent::new(
-                image_handles,
-                enemy.name.clone(),
-                Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
-                Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
-                Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
-                6,
-                0,
-                AnimState::default(),
-            ),
+            AnimationHandles {
+                handles: image_handles,
+            },
         );
     }
     enemy_anims.enemies = anim_map;
@@ -238,19 +255,21 @@ fn load_player_animations(
     mut list: ResMut<AnimationList>,
     asset_server: Res<AssetServer>,
     anim_assets: ResMut<Assets<AnimationListAsset>>,
+    mut images_to_load: ResMut<ImagesToLoad>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut player_anim: ResMut<PlayerAnimation>,
 ) {
-    let anim_list = anim_assets.get(&list.handle);
-    if list.loaded_players || anim_list.is_none() {
+    if !asset_server.is_loaded_with_dependencies(&list.handle) {
         return;
     }
+    let anim_list = anim_assets.get(&list.handle);
     let anim_list = anim_list.unwrap();
     let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
     let player = &anim_list.player;
     for name in player.anim_names.iter() {
         let texture_handle: Handle<Image> =
             asset_server.load(format!("sprites/player/hero_{0}.png", name));
+        images_to_load.images.push(texture_handle.id());
         let texture_atlas = TextureAtlas::from_grid(
             texture_handle,
             Vec2::new(
@@ -267,16 +286,7 @@ fn load_player_animations(
         );
         image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
     }
-    player_anim.player = AnimationComponent::new(
-        image_handles,
-        player.name.clone(),
-        Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
-        Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
-        Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
-        6,
-        0,
-        AnimState::Idle,
-    );
+    player_anim.anims.handles = image_handles;
     player_anim.loaded = true;
     list.loaded_players = true;
 }
@@ -321,6 +331,28 @@ fn flash_sprite(time: Res<Time>, mut query: Query<(&mut AnimationComponent, &mut
                     anim.state = AnimState::Dead;
                 }
             }
+        }
+    }
+}
+
+fn wait_for_assets_to_load(
+    mut events: EventReader<AssetEvent<Image>>,
+    mut images_to_load: ResMut<ImagesToLoad>,
+    anim_list: Res<AnimationList>,
+    state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if anim_list.is_loaded() {
+        println!("{} assets to load", images_to_load.images.len());
+        for event in events.read() {
+            if let AssetEvent::LoadedWithDependencies { id } = event {
+                if images_to_load.images.contains(id) {
+                    images_to_load.images.retain(|x| x != id);
+                }
+            }
+        }
+        if images_to_load.images.is_empty() {
+            next_state.set(state.transition());
         }
     }
 }

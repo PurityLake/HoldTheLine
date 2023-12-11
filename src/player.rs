@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    animation::{AnimState, AnimationComponent, PlayerAnimation},
+    animation::{AnimState, AnimationComponent, ImagesToLoad, PlayerAnimation},
     state::GameState,
     GameplayStart,
 };
@@ -39,12 +39,19 @@ impl Default for PlayerAttackTimer {
 #[derive(Component, Default)]
 struct PlayerAttack;
 
+#[derive(Resource, Default)]
+pub struct PlayerAttackSprite {
+    pub sprite: Handle<Image>,
+}
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerLoaded>()
             .insert_resource(PlayerAttackTimer::default())
+            .insert_resource(PlayerAttackSprite::default())
+            .add_systems(Startup, load_assets)
             .add_systems(Update, setup)
             .add_systems(
                 Update,
@@ -70,6 +77,16 @@ impl Plugin for PlayerPlugin {
     }
 }
 
+fn load_assets(
+    asset_server: Res<AssetServer>,
+    mut attack_sprite: ResMut<PlayerAttackSprite>,
+    mut images_to_load: ResMut<ImagesToLoad>,
+) {
+    let handle = asset_server.load("sprites/other/player_attack.png");
+    images_to_load.images.push(handle.id());
+    attack_sprite.sprite = handle;
+}
+
 fn setup(
     mut commands: Commands,
     mut player_loaded: ResMut<PlayerLoaded>,
@@ -80,12 +97,12 @@ fn setup(
     }
     commands.spawn((
         SpriteSheetBundle {
-            texture_atlas: player_anim.player.get_handle().unwrap(),
+            texture_atlas: player_anim.anims.get_handle(AnimState::Idle).unwrap(),
             transform: Transform::from_translation(Vec3::new(-500.0, 40.0, 0.0))
                 .with_scale(Vec3::splat(2.0)),
             ..default()
         },
-        player_anim.player.clone(),
+        AnimationComponent::new(AnimState::Idle),
         PlayerDirection::None,
     ));
     player_loaded.loaded = true;
@@ -107,6 +124,7 @@ fn add_collisions(mut commands: Commands, player: Query<Entity, With<PlayerDirec
 fn slide_in_player(
     time: Res<Time>,
     mut gameplay_start: ResMut<GameplayStart>,
+    player_anim: Res<PlayerAnimation>,
     mut player: Query<(
         &PlayerDirection,
         &mut Transform,
@@ -118,13 +136,13 @@ fn slide_in_player(
         for (_, mut player_transform, mut handle, mut anim) in player.iter_mut() {
             if anim.state == AnimState::Idle {
                 anim.state = AnimState::Walking;
-                *handle = anim.get_handle().unwrap();
+                *handle = player_anim.anims.get_handle(anim.state).unwrap();
             }
             player_transform.translation.x += 200.0 * time.delta_seconds();
             if player_transform.translation.x >= gameplay_start.player_endpos.x {
                 gameplay_start.play_inplace = true;
                 anim.state = AnimState::Idle;
-                *handle = anim.get_handle().unwrap();
+                *handle = player_anim.anims.get_handle(anim.state).unwrap();
             }
         }
     }
@@ -150,6 +168,7 @@ fn move_player(
 
 fn change_player_anim(
     player_loaded: Res<PlayerLoaded>,
+    player_anim: Res<PlayerAnimation>,
     mut player: Query<(
         &PlayerDirection,
         &mut Handle<TextureAtlas>,
@@ -165,11 +184,11 @@ fn change_player_anim(
             match *dir {
                 PlayerDirection::Up | PlayerDirection::Down => {
                     anim.state = AnimState::Walking;
-                    *handle = anim.get_handle().unwrap();
+                    *handle = player_anim.anims.get_handle(anim.state).unwrap();
                 }
                 _ => {
                     anim.state = AnimState::Idle;
-                    *handle = anim.get_handle().unwrap();
+                    *handle = player_anim.anims.get_handle(anim.state).unwrap();
                 }
             }
         }
@@ -185,8 +204,8 @@ fn tick_attack_timer(time: Res<Time>, mut timer: ResMut<PlayerAttackTimer>) {
 
 fn handle_input(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     input: Res<Input<KeyCode>>,
+    player_attack: Res<PlayerAttackSprite>,
     mut player_attack_timer: ResMut<PlayerAttackTimer>,
     mut player: Query<(&mut PlayerDirection, &Transform)>,
 ) {
@@ -205,13 +224,14 @@ fn handle_input(
             player_attack_timer.timer.reset();
             commands.spawn((
                 SpriteBundle {
-                    texture: asset_server.load("sprites/other/player_attack.png"),
+                    texture: player_attack.sprite.clone(),
                     transform: Transform::from_translation(Vec3::new(
                         transform.translation.x + 5.0,
                         transform.translation.y,
                         0.0,
                     ))
                     .with_scale(Vec3::splat(0.75)),
+                    visibility: Visibility::Visible,
                     ..default()
                 },
                 PlayerAttack,

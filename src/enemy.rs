@@ -12,12 +12,16 @@ pub struct EnemySpawnPlugin;
 
 #[derive(Component)]
 struct Enemy {
+    pub name: String,
     speed: f32,
 }
 
-impl Default for Enemy {
-    fn default() -> Self {
-        Self { speed: 100. }
+impl Enemy {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            speed: 100.0,
+        }
     }
 }
 
@@ -42,17 +46,16 @@ impl Default for EnemySpawnData {
 
 impl Plugin for EnemySpawnPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource::<EnemySpawnData>(EnemySpawnData::default())
-            .add_systems(
-                Update,
-                (
-                    move_enemies,
-                    spawn_enemy,
-                    remove_enemies,
-                    react_to_collision,
-                )
-                    .run_if(in_state(GameState::GamePlay)),
-            );
+        app.insert_resource(EnemySpawnData::default()).add_systems(
+            Update,
+            (
+                move_enemies,
+                spawn_enemy,
+                remove_enemies,
+                react_to_collision,
+            )
+                .run_if(in_state(GameState::GamePlay)),
+        );
     }
 }
 
@@ -69,9 +72,9 @@ fn spawn_enemy(
             let anim = enemy_anims.enemies.get("demon").unwrap();
             commands.spawn((
                 SpriteSheetBundle {
-                    texture_atlas: anim.get_handle().unwrap(),
+                    texture_atlas: anim.get_handle(AnimState::Walking).unwrap(),
                     transform: Transform::from_translation(Vec3::new(
-                        gameplay_start.camera_endpos.x + 450.0,
+                        gameplay_start.camera_endpos.x + 700.0,
                         rng.gen_range(-250.0..250.0),
                         0.,
                     ))
@@ -79,8 +82,8 @@ fn spawn_enemy(
                     visibility: Visibility::Visible,
                     ..default()
                 },
-                anim.clone(),
-                Enemy::default(),
+                AnimationComponent::default(),
+                Enemy::new("demon"),
                 RigidBody::KinematicPositionBased,
                 Collider::cuboid(6.0, 7.0),
                 Sensor,
@@ -123,6 +126,7 @@ fn remove_enemies(
 fn react_to_collision(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
+    anims: Res<EnemyAnimations>,
     mut query: Query<(
         Entity,
         &Enemy,
@@ -141,11 +145,16 @@ fn react_to_collision(
                 } else {
                     Err(())
                 };
-                if let Ok((entity, _, mut handle, mut atlas, mut anim)) = enemy {
+                if let Ok((entity, enemy, mut handle, mut atlas, mut anim)) = enemy {
                     if !anim.state.is_dying() {
                         anim.state = AnimState::Dying;
                         atlas.index = 0;
-                        *handle = anim.get_handle().unwrap();
+                        *handle = anims
+                            .enemies
+                            .get(&enemy.name)
+                            .unwrap()
+                            .get_handle(AnimState::Dying)
+                            .unwrap();
                         commands
                             .entity(entity)
                             .remove::<Collider>()

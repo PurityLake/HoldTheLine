@@ -67,7 +67,6 @@ fn main() {
             EnemySpawnPlugin,
             AnimationLoadPlugin,
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
-            #[cfg(debug_assertions)]
             RapierDebugRenderPlugin::default(),
         ))
         .add_state::<GameState>()
@@ -81,6 +80,19 @@ fn main() {
             transition_to_gameplay.run_if(in_state(GameState::TransitionToGamePlay)),
         )
         .run();
+}
+
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(Camera2dBundle {
+        transform: Transform::from_translation(Vec3::new(-500.0, 0.0, 100.0)),
+        ..default()
+    });
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("sprites/map/map.png"),
+        transform: Transform::from_scale(Vec3::new(1.25, 1.25, 1.0))
+            .with_translation(Vec3::new(0.0, 0.0, -1.0)),
+        ..default()
+    });
 }
 
 fn transition_to_gameplay(
@@ -102,18 +114,6 @@ fn transition_to_gameplay(
     if gameplay_start.can_start() && list.is_loaded() {
         next_state.set(state.transition());
     }
-}
-
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2dBundle {
-        transform: Transform::from_translation(Vec3::new(-500.0, 0.0, 100.0)),
-        ..default()
-    });
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("sprites/map/map.png"),
-        transform: Transform::from_scale(Vec3::new(1.25, 1.25, 1.0)),
-        ..default()
-    });
 }
 
 fn main_menu_input(
