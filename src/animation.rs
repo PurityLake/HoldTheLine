@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use crate::json::*;
+use crate::{json::*, GameState};
 use bevy::prelude::*;
 use serde::Deserialize;
 
@@ -163,13 +163,19 @@ impl Plugin for AnimationLoadPlugin {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (load_player_animations, load_enemy_animations)
-                .run_if(state_exists_and_equals(crate::GameState::GamePlay)),
+            load_player_animations.run_if(in_state(GameState::MainMenu)),
         )
         .add_systems(
             Update,
-            (animate_sprite, flash_sprite)
-                .run_if(state_exists_and_equals(crate::GameState::GamePlay)),
+            (load_player_animations, load_enemy_animations)
+                .run_if(state_exists_and_equals(GameState::TransitionToGamePlay)),
+        )
+        .add_systems(
+            Update,
+            (animate_sprite, flash_sprite).run_if(
+                state_exists_and_equals(GameState::TransitionToGamePlay)
+                    .or_else(state_exists_and_equals(GameState::GamePlay)),
+            ),
         );
     }
 }

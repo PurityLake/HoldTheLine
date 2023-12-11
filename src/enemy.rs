@@ -5,6 +5,7 @@ use rand::prelude::*;
 use crate::{
     animation::{AnimState, AnimationComponent, EnemyAnimations},
     state::GameState,
+    GameplayStart,
 };
 
 pub struct EnemySpawnPlugin;
@@ -48,7 +49,7 @@ impl Plugin for EnemySpawnPlugin {
                     move_enemies,
                     spawn_enemy,
                     remove_enemies,
-                    display_collision_events,
+                    react_to_collision,
                 )
                     .run_if(in_state(GameState::GamePlay)),
             );
@@ -59,6 +60,7 @@ fn spawn_enemy(
     time: Res<Time>,
     mut commands: Commands,
     mut spawn_data: ResMut<EnemySpawnData>,
+    gameplay_start: Res<GameplayStart>,
     enemy_anims: Res<EnemyAnimations>,
 ) {
     if spawn_data.curr_time > spawn_data.spawn_time {
@@ -69,7 +71,7 @@ fn spawn_enemy(
                 SpriteSheetBundle {
                     texture_atlas: anim.get_handle().unwrap(),
                     transform: Transform::from_translation(Vec3::new(
-                        500.,
+                        gameplay_start.camera_endpos.x + 450.0,
                         rng.gen_range(-250.0..250.0),
                         0.,
                     ))
@@ -118,7 +120,7 @@ fn remove_enemies(
     }
 }
 
-fn display_collision_events(
+fn react_to_collision(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     mut query: Query<(

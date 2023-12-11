@@ -6,6 +6,7 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     animation::{AnimState, AnimationComponent, PlayerAnimation},
     state::GameState,
+    GameplayStart,
 };
 
 #[derive(Component)]
@@ -46,8 +47,11 @@ impl Plugin for PlayerPlugin {
             .insert_resource(PlayerAttackTimer::default())
             .add_systems(
                 Update,
+                (setup, slide_in_player).run_if(in_state(GameState::TransitionToGamePlay)),
+            )
+            .add_systems(
+                Update,
                 (
-                    setup,
                     move_player,
                     handle_input,
                     change_player_anim,
@@ -70,7 +74,7 @@ fn setup(
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: player_anim.player.get_handle().unwrap(),
-            transform: Transform::from_translation(Vec3::new(-350.0, 0.0, 0.0))
+            transform: Transform::from_translation(Vec3::new(-500.0, 40.0, 0.0))
                 .with_scale(Vec3::splat(2.0)),
             ..default()
         },
@@ -84,6 +88,21 @@ fn setup(
         CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
     ));
     player_loaded.loaded = true;
+}
+
+fn slide_in_player(
+    time: Res<Time>,
+    mut gameplay_start: ResMut<GameplayStart>,
+    mut player: Query<(&PlayerDirection, &mut Transform)>,
+) {
+    if !gameplay_start.play_inplace {
+        for (_, mut player_transform) in player.iter_mut() {
+            player_transform.translation.x += 200.0 * time.delta_seconds();
+            if player_transform.translation.x >= gameplay_start.player_endpos.x {
+                gameplay_start.play_inplace = true;
+            }
+        }
+    }
 }
 
 fn move_player(

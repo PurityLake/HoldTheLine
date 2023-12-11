@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum GameState {
     #[default]
@@ -8,4 +7,15 @@ pub enum GameState {
     TransitionToGamePlay,
     GamePlay,
     Pause,
+}
+
+impl GameState {
+    pub fn transition(&self) -> Self {
+        match self {
+            GameState::MainMenu => GameState::TransitionToGamePlay,
+            GameState::TransitionToGamePlay => GameState::GamePlay,
+            GameState::GamePlay => GameState::Pause,
+            GameState::Pause => GameState::GamePlay,
+        }
+    }
 }
