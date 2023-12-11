@@ -321,7 +321,7 @@ fn flash_sprite(time: Res<Time>, mut query: Query<(&mut AnimationComponent, &mut
                 match *visible {
                     Visibility::Visible => *visible = Visibility::Hidden,
                     Visibility::Hidden => *visible = Visibility::Visible,
-                    Visibility::Inherited => (),
+                    Visibility::Inherited => *visible = Visibility::Hidden,
                 }
                 if anim.flash_count >= anim.max_flashes {
                     anim.state = AnimState::Dead;

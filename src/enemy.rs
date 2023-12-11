@@ -13,7 +13,7 @@ use crate::{
 pub struct EnemySpawnPlugin;
 
 #[derive(Component)]
-struct Enemy {
+pub struct Enemy {
     pub name: String,
     speed: f32,
 }
@@ -78,7 +78,6 @@ fn spawn_enemy(
                     0.,
                 ))
                 .with_scale(Vec3::splat(2.0)),
-                visibility: Visibility::Visible,
                 ..default()
             },
             AnimationComponent::default(),
@@ -133,6 +132,7 @@ fn react_to_collision(
     for event in collision_events.read() {
         if let CollisionEvent::Started(a, b, flags) = event {
             if flags.bits() & 0b01 == 0b01 {
+                // player attack enemy
                 let enemy = if let Ok(result) = query.get_mut(*a) {
                     Ok(result)
                 } else if let Ok(result) = query.get_mut(*b) {

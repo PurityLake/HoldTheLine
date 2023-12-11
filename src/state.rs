@@ -9,6 +9,8 @@ pub enum GameState {
     TransitionToGamePlay,
     GamePlay,
     Pause,
+    GameOver,
+    Cleanup,
 }
 
 impl GameState {
@@ -20,6 +22,8 @@ impl GameState {
             GameState::TransitionToGamePlay => GameState::GamePlay,
             GameState::GamePlay => GameState::Pause,
             GameState::Pause => GameState::GamePlay,
+            GameState::GameOver => GameState::Cleanup,
+            GameState::Cleanup => GameState::MainMenu,
         }
     }
 }

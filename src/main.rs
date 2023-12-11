@@ -76,6 +76,7 @@ fn main() {
             Update,
             transition_to_gameplay.run_if(in_state(GameState::TransitionToGamePlay)),
         )
+        .add_systems(OnEnter(GameState::GameOver), remove_enemies)
         .run();
 }
 
@@ -90,6 +91,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             .with_translation(Vec3::new(0.0, 0.0, -1.0)),
         ..default()
     });
+}
+
+fn remove_enemies(mut commands: Commands, query: Query<Entity, With<enemy::Enemy>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
 }
 
 fn transition_to_gameplay(
