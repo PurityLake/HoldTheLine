@@ -22,7 +22,7 @@ impl Enemy {
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            speed: 100.0,
+            speed: 75.0,
         }
     }
 }
@@ -67,7 +67,8 @@ fn spawn_enemy(
     spawn_data.timer.tick(time.delta());
     if spawn_data.timer.just_finished() {
         let mut rng = thread_rng();
-        let anim = enemy_anims.enemies.get("demon").unwrap();
+        let enemy_name = enemy_anims.enemies.keys().choose(&mut rng).unwrap();
+        let anim = enemy_anims.enemies.get(enemy_name).unwrap();
         commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: anim.get_handle(AnimState::Walking).unwrap(),
@@ -81,7 +82,7 @@ fn spawn_enemy(
                 ..default()
             },
             AnimationComponent::default(),
-            Enemy::new("demon"),
+            Enemy::new(enemy_name),
             RigidBody::KinematicPositionBased,
             Collider::cuboid(6.0, 7.0),
             Sensor,
