@@ -53,8 +53,16 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(Camera2dBundle {
+        transform: Transform::from_translation(Vec3::new(-500.0, 0.0, 1000.0)),
+        ..default()
+    });
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("sprites/map/map.png"),
+        transform: Transform::from_scale(Vec3::new(1.25, 1.25, 1.0)),
+        ..default()
+    });
 }
 
 fn main_menu_input(input: Res<Input<KeyCode>>, mut game_state: ResMut<NextState<GameState>>) {
