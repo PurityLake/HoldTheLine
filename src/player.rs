@@ -45,9 +45,16 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerLoaded>()
             .insert_resource(PlayerAttackTimer::default())
+            .add_systems(Update, setup)
             .add_systems(
                 Update,
-                (setup, slide_in_player).run_if(in_state(GameState::TransitionToGamePlay)),
+                slide_in_player.run_if(in_state(GameState::TransitionToGamePlay)),
+            )
+            .add_systems(
+                Update,
+                add_collisions
+                    .run_if(in_state(GameState::GamePlay))
+                    .run_if(run_once()),
             )
             .add_systems(
                 Update,
@@ -80,14 +87,21 @@ fn setup(
         },
         player_anim.player.clone(),
         PlayerDirection::None,
-        RigidBody::KinematicPositionBased,
-        Collider::cuboid(6.0, 7.0),
-        Sensor,
-        ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
-        ActiveEvents::COLLISION_EVENTS,
-        CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
     ));
     player_loaded.loaded = true;
+}
+
+fn add_collisions(mut commands: Commands, player: Query<Entity, With<PlayerDirection>>) {
+    if let Ok(entity) = player.get_single() {
+        commands
+            .entity(entity)
+            .insert(RigidBody::KinematicPositionBased)
+            .insert(Collider::cuboid(6.0, 7.0))
+            .insert(Sensor)
+            .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC)
+            .insert(ActiveEvents::COLLISION_EVENTS)
+            .insert(CollisionGroups::new(Group::GROUP_3, Group::GROUP_4));
+    }
 }
 
 fn slide_in_player(
