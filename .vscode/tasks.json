@@ -14,7 +14,21 @@
             "problemMatcher": [],
             "group": {
                 "kind": "build",
-                "isDefault": true
+            }
+        },
+        {
+            "label": "holdtheline: run (release)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "run",
+                "--release",
+                "--features",
+                "bevy_rapier2d/debug-render-2d"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
             }
         }
     ]
