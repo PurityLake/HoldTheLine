@@ -1,13 +1,4 @@
 {
-    "enemy_anim_names": [
-        "walk",
-        "die"
-    ],
-    "player_anim_names": [
-        "walk",
-        "hurt",
-        "die"
-    ],
     "tileset": {
         "width": 16,
         "height": 16,
@@ -20,7 +11,48 @@
             "anim_names": [
                 "walk",
                 "die"
-            ]
+            ],
+            "height": 16
+        },
+        {
+            "name": "skeleton",
+            "anim_names": [
+                "walk",
+                "die"
+            ],
+            "height": 16
+        },
+        {
+            "name": "dragon",
+            "anim_names": [
+                "walk",
+                "die"
+            ],
+            "height": 18
+        },
+        {
+            "name": "devil",
+            "anim_names": [
+                "walk",
+                "die"
+            ],
+            "height": 19
+        },
+        {
+            "name": "ghost",
+            "anim_names": [
+                "walk",
+                "die"
+            ],
+            "height": 16
+        },
+        {
+            "name": "goblin",
+            "anim_names": [
+                "walk",
+                "die"
+            ],
+            "height": 16
         }
     ],
     "player": {
