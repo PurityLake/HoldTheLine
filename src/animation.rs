@@ -18,6 +18,7 @@ pub struct TilesetData {
 pub struct EnemyAnimationEntry {
     pub name: String,
     pub anim_names: Vec<String>,
+    pub height: f32,
 }
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
@@ -28,8 +29,6 @@ pub struct PlayerAnimationEntry {
 
 #[derive(Asset, TypePath, Debug, Deserialize, Default)]
 pub struct AnimationListAsset {
-    pub enemy_anim_names: Vec<String>,
-    pub player_anim_names: Vec<String>,
     pub tileset: TilesetData,
     pub enemies: Vec<EnemyAnimationEntry>,
     pub player: PlayerAnimationEntry,
@@ -220,16 +219,13 @@ fn load_enemy_animations(
     let mut anim_map: HashMap<String, AnimationHandles> = HashMap::new();
     for enemy in anim_list.enemies.iter() {
         let mut image_handles: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
-        for name in anim_list.enemy_anim_names.iter() {
+        for name in enemy.anim_names.iter() {
             let texture_handle: Handle<Image> =
                 asset_server.load(format!("sprites/enemies/{0}_{1}.png", enemy.name, name));
             images_to_load.images.push(texture_handle.id());
             let texture_atlas = TextureAtlas::from_grid(
                 texture_handle,
-                Vec2::new(
-                    anim_list.tileset.width as f32,
-                    anim_list.tileset.height as f32,
-                ),
+                Vec2::new(anim_list.tileset.width as f32, enemy.height),
                 4,
                 1,
                 Some(Vec2::new(
@@ -240,6 +236,7 @@ fn load_enemy_animations(
             );
             image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
         }
+        println!("Loaded enemy: {}", enemy.name);
         anim_map.insert(
             enemy.name.clone(),
             AnimationHandles {
@@ -343,7 +340,6 @@ fn wait_for_assets_to_load(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if anim_list.is_loaded() {
-        println!("{} assets to load", images_to_load.images.len());
         for event in events.read() {
             if let AssetEvent::LoadedWithDependencies { id } = event {
                 if images_to_load.images.contains(id) {
