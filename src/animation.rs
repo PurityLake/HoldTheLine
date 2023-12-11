@@ -134,7 +134,7 @@ impl Default for AnimationComponent {
             first: 0,
             last: 3,
             timer: Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
-            dying_timer: Timer::new(Duration::from_secs_f32(0.5), TimerMode::Once),
+            dying_timer: Timer::new(Duration::from_secs_f32(0.5), TimerMode::Repeating),
             flashing_timer: Timer::new(Duration::from_secs_f32(0.2), TimerMode::Repeating),
             max_flashes: 6,
             flash_count: 0,

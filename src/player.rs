@@ -106,12 +106,20 @@ impl Plugin for PlayerPlugin {
 
 fn player_dies(
     mut command: Commands,
-    mut player: Query<(Entity, &mut TextureAtlasSprite, &mut AnimationComponent)>,
+    player_anim: Res<PlayerAnimation>,
+    mut player: Query<(
+        Entity,
+        &mut Handle<TextureAtlas>,
+        &mut TextureAtlasSprite,
+        &mut AnimationComponent,
+        &PlayerDirection,
+    )>,
 ) {
-    if let Ok((entity, mut sprite, mut anim)) = player.get_single_mut() {
+    if let Ok((entity, mut handle, mut sprite, mut anim, _)) = player.get_single_mut() {
         if matches!(anim.state, AnimState::Walking | AnimState::Idle) {
             anim.state = AnimState::Dying;
             sprite.index = 0;
+            *handle = player_anim.anims.get_handle(anim.state).unwrap();
         } else if matches!(anim.state, AnimState::Dead) {
             command.entity(entity).despawn();
         }
