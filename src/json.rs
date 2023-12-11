@@ -54,7 +54,7 @@ where
         &'b self,
         reader: &'b mut Reader,
         _settings: &'b (),
-        _load_contrext: &'b mut LoadContext,
+        _load_context: &'b mut LoadContext,
     ) -> BoxedFuture<'b, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();
