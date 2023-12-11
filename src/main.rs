@@ -72,6 +72,7 @@ fn main() {
             Update,
             (main_menu_input).run_if(in_state(GameState::MainMenu)),
         )
+        .add_systems(OnExit(GameState::MainMenu), remove_text)
         .add_systems(
             Update,
             transition_to_gameplay.run_if(in_state(GameState::TransitionToGamePlay)),
@@ -80,9 +81,29 @@ fn main() {
         .run();
 }
 
+fn remove_text(mut commands: Commands, query: Query<Entity, With<Text>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle {
         transform: Transform::from_translation(Vec3::new(-500.0, 0.0, 100.0)),
+        ..default()
+    });
+
+    commands.spawn(Text2dBundle {
+        text: Text::from_section(
+            "Hold The Line",
+            TextStyle {
+                font: asset_server.load("fonts/plop.ttf"),
+                font_size: 99.0,
+                color: Color::rgb(1.0, 1.0, 0.0),
+            },
+        )
+        .with_alignment(TextAlignment::Center),
+        transform: Transform::from_translation(Vec3::new(-500.0, 200.0, 0.0)),
         ..default()
     });
     commands.spawn(SpriteBundle {
