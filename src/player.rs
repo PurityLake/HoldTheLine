@@ -81,6 +81,7 @@ fn setup(
         Sensor,
         ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
         ActiveEvents::COLLISION_EVENTS,
+        CollisionGroups::new(Group::GROUP_3, Group::GROUP_4),
     ));
     player_loaded.loaded = true;
 }
@@ -175,6 +176,7 @@ fn handle_input(
                 Sensor,
                 ActiveEvents::COLLISION_EVENTS,
                 ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
+                CollisionGroups::new(Group::GROUP_2, Group::GROUP_1),
             ));
         }
     }

@@ -44,7 +44,13 @@ impl Plugin for EnemySpawnPlugin {
         app.insert_resource::<EnemySpawnData>(EnemySpawnData::default())
             .add_systems(
                 Update,
-                (move_enemies, spawn_enemy, remove_enemies).run_if(in_state(GameState::GamePlay)),
+                (
+                    move_enemies,
+                    spawn_enemy,
+                    remove_enemies,
+                    display_collision_events,
+                )
+                    .run_if(in_state(GameState::GamePlay)),
             );
     }
 }
@@ -78,6 +84,7 @@ fn spawn_enemy(
                 Sensor,
                 ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
                 ActiveEvents::COLLISION_EVENTS,
+                CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
             ));
             spawn_data.curr_spawned += 1;
             spawn_data.curr_time = 0.;
@@ -89,22 +96,11 @@ fn spawn_enemy(
 
 fn move_enemies(
     time: Res<Time>,
-    mut enemies: Query<(
-        &Enemy,
-        &mut Handle<TextureAtlas>,
-        &mut TextureAtlasSprite,
-        &mut Transform,
-        &mut AnimationComponent,
-    )>,
+    mut enemies: Query<(&Enemy, &mut Transform, &AnimationComponent)>,
 ) {
-    for (enemy, mut handle, mut atlas, mut transform, mut anim) in enemies.iter_mut() {
+    for (enemy, mut transform, anim) in enemies.iter_mut() {
         if anim.state == AnimState::Walking {
             transform.translation.x -= enemy.speed * time.delta_seconds();
-            if transform.translation.x < 0. {
-                anim.state = AnimState::Dying;
-                atlas.index = 0;
-                *handle = anim.get_handle().unwrap();
-            }
         }
     }
 }
@@ -118,6 +114,45 @@ fn remove_enemies(
         if data.state == AnimState::Dead {
             commands.entity(entity).despawn();
             spawn_data.curr_spawned -= 1;
+        }
+    }
+}
+
+fn display_collision_events(
+    mut commands: Commands,
+    mut collision_events: EventReader<CollisionEvent>,
+    mut query: Query<(
+        Entity,
+        &Enemy,
+        &mut Handle<TextureAtlas>,
+        &mut TextureAtlasSprite,
+        &mut AnimationComponent,
+    )>,
+) {
+    for event in collision_events.read() {
+        if let CollisionEvent::Started(a, b, flags) = event {
+            if flags.bits() & 0b01 == 0b01 {
+                let enemy = if let Ok(result) = query.get_mut(*a) {
+                    Ok(result)
+                } else if let Ok(result) = query.get_mut(*b) {
+                    Ok(result)
+                } else {
+                    Err(())
+                };
+                if let Ok((entity, _, mut handle, mut atlas, mut anim)) = enemy {
+                    if !anim.state.is_dying() {
+                        anim.state = AnimState::Dying;
+                        atlas.index = 0;
+                        *handle = anim.get_handle().unwrap();
+                        commands
+                            .entity(entity)
+                            .remove::<Collider>()
+                            .remove::<ActiveCollisionTypes>()
+                            .remove::<ActiveEvents>()
+                            .remove::<CollisionGroups>();
+                    }
+                }
+            }
         }
     }
 }

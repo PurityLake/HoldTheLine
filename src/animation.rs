@@ -55,7 +55,7 @@ pub enum AnimState {
 }
 
 impl AnimState {
-    fn should_anim(&self) -> bool {
+    pub fn should_anim(&self) -> bool {
         match self {
             AnimState::Walking => true,
             AnimState::Idle => true,
@@ -64,6 +64,13 @@ impl AnimState {
             AnimState::Flashing => false,
             AnimState::Dead => false,
         }
+    }
+
+    pub fn is_dying(&self) -> bool {
+        matches!(
+            self,
+            AnimState::Dying | AnimState::Dead | AnimState::Flashing
+        )
     }
 }
 
