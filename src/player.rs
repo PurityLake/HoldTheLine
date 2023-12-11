@@ -30,14 +30,22 @@ struct PlayerAttackTimer {
 impl Default for PlayerAttackTimer {
     fn default() -> Self {
         Self {
-            timer: Timer::new(Duration::from_secs_f32(0.75), TimerMode::Once),
+            timer: Timer::new(Duration::from_secs_f32(0.8), TimerMode::Once),
             attacked: false,
         }
     }
 }
 
-#[derive(Component, Default)]
-struct PlayerAttack;
+#[derive(Component)]
+struct PlayerAttack {
+    pub health: i32,
+}
+
+impl Default for PlayerAttack {
+    fn default() -> Self {
+        Self { health: 10 }
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct PlayerAttackSprite {
@@ -71,6 +79,7 @@ impl Plugin for PlayerPlugin {
                     change_player_anim,
                     update_attack,
                     tick_attack_timer,
+                    react_to_collision,
                 )
                     .run_if(in_state(GameState::GamePlay)),
             );
@@ -232,7 +241,7 @@ fn handle_input(
                     visibility: Visibility::Visible,
                     ..default()
                 },
-                PlayerAttack,
+                PlayerAttack::default(),
                 RigidBody::KinematicPositionBased,
                 Collider::capsule_y(10.0, 6.0),
                 Sensor,
@@ -258,6 +267,32 @@ fn update_attack(
         transform.translation.x += 150.0 * time.delta_seconds();
         if transform.translation.x > start.camera_endpos.x + 450.0 {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn react_to_collision(
+    mut commands: Commands,
+    mut collision_events: EventReader<CollisionEvent>,
+    mut query: Query<(Entity, &mut PlayerAttack)>,
+) {
+    for event in collision_events.read() {
+        if let CollisionEvent::Started(a, b, flags) = event {
+            if flags.bits() & 0b01 == 0b01 {
+                let attack = if let Ok(result) = query.get_mut(*a) {
+                    Ok(result)
+                } else if let Ok(result) = query.get_mut(*b) {
+                    Ok(result)
+                } else {
+                    Err(())
+                };
+                if let Ok((entity, mut attack)) = attack {
+                    attack.health -= 1;
+                    if attack.health <= 0 {
+                        commands.entity(entity).despawn();
+                    }
+                }
+            }
         }
     }
 }
