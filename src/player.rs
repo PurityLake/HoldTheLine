@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
+use serde::de;
 
 use crate::{
     animation::{
@@ -12,7 +13,7 @@ use crate::{
     GameplayStart,
 };
 
-#[derive(Component)]
+#[derive(Resource)]
 struct PlayerData {
     max_health: i32,
     health: i32,
@@ -77,14 +78,34 @@ pub struct PlayerPlugin;
 #[derive(Resource)]
 pub struct PlayerPhysicsAttached(bool);
 
+#[derive(Resource)]
+pub struct GameStats {
+    pub villagers_saved: i32,
+    pub villagers_lost: i32,
+    pub entites_spawned: i32,
+}
+
+impl Default for GameStats {
+    fn default() -> Self {
+        Self {
+            villagers_saved: 0,
+            villagers_lost: 0,
+            entites_spawned: 0,
+        }
+    }
+}
+
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerLoaded>()
             .insert_resource(PlayerAttackTimer::default())
             .insert_resource(PlayerAttackSprite::default())
             .insert_resource(PlayerPhysicsAttached(false))
+            .insert_resource(GameStats::default())
+            .insert_resource(PlayerData::default())
             .add_systems(Startup, load_assets)
             .add_systems(Update, setup)
+            .add_systems(OnEnter(GameState::GamePlay), spawn_text)
             .add_systems(
                 Update,
                 slide_in_player.run_if(in_state(GameState::TransitionToGamePlay)),
@@ -104,10 +125,73 @@ impl Plugin for PlayerPlugin {
                     tick_attack_timer,
                     react_to_player_attack_collision,
                     react_to_player_collision,
+                    update_text,
                 )
                     .run_if(in_state(GameState::GamePlay)),
             )
             .add_systems(Update, player_dies.run_if(in_state(GameState::GameOver)));
+    }
+}
+
+#[derive(Component, Default)]
+struct EntitiesText;
+
+fn spawn_text(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    player_data: Res<PlayerData>,
+) {
+    commands.spawn((
+        TextBundle {
+            text: Text::from_sections([
+                TextSection {
+                    value: format!("Entities Spawned: {}", 0),
+                    style: TextStyle {
+                        font: asset_server.load("fonts/plop.ttf"),
+                        font_size: 25.0,
+                        color: Color::WHITE,
+                    },
+                },
+                TextSection {
+                    value: format!("Player Life: {}", player_data.health),
+                    style: TextStyle {
+                        font: asset_server.load("fonts/plop.ttf"),
+                        font_size: 25.0,
+                        color: Color::WHITE,
+                    },
+                },
+            ]),
+            ..default()
+        },
+        EntitiesText,
+    ));
+}
+
+fn update_text(
+    score: Res<GameStats>,
+    asset_server: Res<AssetServer>,
+    player_data: Res<PlayerData>,
+    mut query: Query<(&mut Text, &EntitiesText)>,
+) {
+    for (mut text, _) in &mut query {
+        *text = Text::from_sections([
+            TextSection {
+                value: format!("Entities Spawned: {}", 0),
+                style: TextStyle {
+                    font: asset_server.load("fonts/plop.ttf"),
+                    font_size: 25.0,
+                    color: Color::WHITE,
+                },
+            },
+            TextSection {
+                value: format!("Player Life: {}", player_data.health),
+                style: TextStyle {
+                    font: asset_server.load("fonts/plop.ttf"),
+                    font_size: 25.0,
+                    color: Color::WHITE,
+                },
+            },
+        ]);
     }
 }
 
@@ -160,7 +244,6 @@ fn setup(
         },
         AnimationComponent::new(AnimState::Idle),
         PlayerDirection::None,
-        PlayerData::default(),
     ));
     player_loaded.loaded = true;
 }
@@ -215,12 +298,13 @@ fn slide_in_player(
 fn move_player(
     time: Res<Time>,
     player_anim: Res<PlayerAnimation>,
-    mut player_pos: Query<(&PlayerDirection, &mut Transform, &mut PlayerData)>,
+    mut player_data: ResMut<PlayerData>,
+    mut player_pos: Query<(&PlayerDirection, &mut Transform)>,
 ) {
     if !player_anim.loaded {
         return;
     }
-    for (dir, mut transform, mut player_data) in &mut player_pos {
+    for (dir, mut transform) in &mut player_pos {
         match *dir {
             PlayerDirection::Up => transform.translation.y += 250.0 * time.delta_seconds(),
             PlayerDirection::Down => transform.translation.y -= 250.0 * time.delta_seconds(),
@@ -359,7 +443,8 @@ fn react_to_player_attack_collision(
 fn react_to_player_collision(
     mut collision_events: EventReader<CollisionEvent>,
     mut next_state: ResMut<NextState<GameState>>,
-    mut query: Query<(Entity, &mut PlayerData)>,
+    mut player_data: ResMut<PlayerData>,
+    mut query: Query<(Entity, &PlayerDirection)>,
 ) {
     for event in collision_events.read() {
         if let CollisionEvent::Started(a, b, flags) = event {
@@ -371,11 +456,10 @@ fn react_to_player_collision(
                 } else {
                     Err(())
                 };
-                if let Ok((_, mut player)) = player {
-                    player.health -= 1;
-                    player.timer.reset();
-                    if player.health <= 0 {
-                        println!("You are dead!");
+                if let Ok((_, _)) = player {
+                    player_data.health -= 1;
+                    player_data.timer.reset();
+                    if player_data.health <= 0 {
                         next_state.set(GameState::GameOver);
                     }
                 }

@@ -9,6 +9,7 @@ use crate::{
         AnimState, AnimationComponent, AnimationHandles, AnimationList, AnimationListAsset,
         EnemyAnimations, ImagesToLoad,
     },
+    player::GameStats,
     state::GameState,
     GameplayStart,
 };
@@ -69,6 +70,7 @@ fn spawn_enemy(
     time: Res<Time>,
     mut commands: Commands,
     mut spawn_data: ResMut<EnemySpawnData>,
+    mut status: ResMut<GameStats>,
     gameplay_start: Res<GameplayStart>,
     enemy_anims: Res<EnemyAnimations>,
 ) {
@@ -98,16 +100,24 @@ fn spawn_enemy(
             CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
         ));
         spawn_data.curr_spawned += 1;
+        status.entites_spawned += 1;
     }
 }
 
 fn move_enemies(
+    mut commands: Commands,
     time: Res<Time>,
-    mut enemies: Query<(&Enemy, &mut Transform, &AnimationComponent)>,
+    camerapos: Res<GameplayStart>,
+    mut stats: ResMut<GameStats>,
+    mut enemies: Query<(Entity, &Enemy, &mut Transform, &AnimationComponent)>,
 ) {
-    for (enemy, mut transform, anim) in enemies.iter_mut() {
+    for (entity, enemy, mut transform, anim) in enemies.iter_mut() {
         if anim.state == AnimState::Walking {
             transform.translation.x -= enemy.speed * time.delta_seconds();
+            if transform.translation.x <= camerapos.camera_endpos.x - 450.0 {
+                commands.entity(entity).despawn();
+                stats.villagers_lost += 1;
+            }
         }
     }
 }
