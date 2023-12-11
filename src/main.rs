@@ -67,6 +67,7 @@ fn main() {
             EnemySpawnPlugin,
             AnimationLoadPlugin,
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+            #[cfg(debug_assertions)]
             RapierDebugRenderPlugin::default(),
         ))
         .add_state::<GameState>()
