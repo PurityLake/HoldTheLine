@@ -158,8 +158,8 @@ fn move_player(
     }
     for (dir, mut transform) in &mut player_pos {
         match *dir {
-            PlayerDirection::Up => transform.translation.y += 150.0 * time.delta_seconds(),
-            PlayerDirection::Down => transform.translation.y -= 150.0 * time.delta_seconds(),
+            PlayerDirection::Up => transform.translation.y += 250.0 * time.delta_seconds(),
+            PlayerDirection::Down => transform.translation.y -= 250.0 * time.delta_seconds(),
             _ => {}
         }
     }
@@ -247,6 +247,7 @@ fn handle_input(
 fn update_attack(
     mut commands: Commands,
     time: Res<Time>,
+    start: Res<GameplayStart>,
     mut query: Query<(Entity, &mut Transform, &PlayerAttack)>,
 ) {
     for (entity, mut transform, _) in &mut query {
@@ -255,7 +256,7 @@ fn update_attack(
             .lerp(Vec3::splat(2.0), time.delta_seconds() * 2.0);
 
         transform.translation.x += 150.0 * time.delta_seconds();
-        if transform.translation.x > 450.0 {
+        if transform.translation.x > start.camera_endpos.x + 450.0 {
             commands.entity(entity).despawn();
         }
     }
