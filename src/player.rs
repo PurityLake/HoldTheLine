@@ -107,13 +107,24 @@ fn add_collisions(mut commands: Commands, player: Query<Entity, With<PlayerDirec
 fn slide_in_player(
     time: Res<Time>,
     mut gameplay_start: ResMut<GameplayStart>,
-    mut player: Query<(&PlayerDirection, &mut Transform)>,
+    mut player: Query<(
+        &PlayerDirection,
+        &mut Transform,
+        &mut Handle<TextureAtlas>,
+        &mut AnimationComponent,
+    )>,
 ) {
     if !gameplay_start.play_inplace {
-        for (_, mut player_transform) in player.iter_mut() {
+        for (_, mut player_transform, mut handle, mut anim) in player.iter_mut() {
+            if anim.state == AnimState::Idle {
+                anim.state = AnimState::Walking;
+                *handle = anim.get_handle().unwrap();
+            }
             player_transform.translation.x += 200.0 * time.delta_seconds();
             if player_transform.translation.x >= gameplay_start.player_endpos.x {
                 gameplay_start.play_inplace = true;
+                anim.state = AnimState::Idle;
+                *handle = anim.get_handle().unwrap();
             }
         }
     }
