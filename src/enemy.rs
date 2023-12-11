@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use rand::prelude::*;
@@ -28,18 +30,14 @@ impl Enemy {
 #[derive(Resource)]
 struct EnemySpawnData {
     curr_spawned: i32,
-    max_spawn: i32,
-    curr_time: f32,
-    spawn_time: f32,
+    timer: Timer,
 }
 
 impl Default for EnemySpawnData {
     fn default() -> Self {
         Self {
             curr_spawned: 0,
-            max_spawn: 32,
-            curr_time: 0.,
-            spawn_time: 1.,
+            timer: Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
         }
     }
 }
@@ -66,36 +64,32 @@ fn spawn_enemy(
     gameplay_start: Res<GameplayStart>,
     enemy_anims: Res<EnemyAnimations>,
 ) {
-    if spawn_data.curr_time > spawn_data.spawn_time {
-        if spawn_data.curr_spawned + 1 < spawn_data.max_spawn {
-            let mut rng = thread_rng();
-            let anim = enemy_anims.enemies.get("demon").unwrap();
-            commands.spawn((
-                SpriteSheetBundle {
-                    texture_atlas: anim.get_handle(AnimState::Walking).unwrap(),
-                    transform: Transform::from_translation(Vec3::new(
-                        gameplay_start.camera_endpos.x + 700.0,
-                        rng.gen_range(-250.0..250.0),
-                        0.,
-                    ))
-                    .with_scale(Vec3::splat(2.0)),
-                    visibility: Visibility::Visible,
-                    ..default()
-                },
-                AnimationComponent::default(),
-                Enemy::new("demon"),
-                RigidBody::KinematicPositionBased,
-                Collider::cuboid(6.0, 7.0),
-                Sensor,
-                ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
-                ActiveEvents::COLLISION_EVENTS,
-                CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
-            ));
-            spawn_data.curr_spawned += 1;
-            spawn_data.curr_time = 0.;
-        }
-    } else {
-        spawn_data.curr_time += time.delta_seconds();
+    spawn_data.timer.tick(time.delta());
+    if spawn_data.timer.just_finished() {
+        let mut rng = thread_rng();
+        let anim = enemy_anims.enemies.get("demon").unwrap();
+        commands.spawn((
+            SpriteSheetBundle {
+                texture_atlas: anim.get_handle(AnimState::Walking).unwrap(),
+                transform: Transform::from_translation(Vec3::new(
+                    gameplay_start.camera_endpos.x + 450.0,
+                    rng.gen_range(-250.0..250.0),
+                    0.,
+                ))
+                .with_scale(Vec3::splat(2.0)),
+                visibility: Visibility::Visible,
+                ..default()
+            },
+            AnimationComponent::default(),
+            Enemy::new("demon"),
+            RigidBody::KinematicPositionBased,
+            Collider::cuboid(6.0, 7.0),
+            Sensor,
+            ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
+            ActiveEvents::COLLISION_EVENTS,
+            CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
+        ));
+        spawn_data.curr_spawned += 1;
     }
 }
 
