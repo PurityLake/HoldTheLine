@@ -10,7 +10,7 @@ mod json;
 mod player;
 mod state;
 
-use animation::AnimationLoadPlugin;
+use animation::{AnimationList, AnimationLoadPlugin};
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowTheme};
 use bevy_rapier2d::prelude::*;
 use enemy::EnemySpawnPlugin;
@@ -86,6 +86,7 @@ fn main() {
 fn transition_to_gameplay(
     time: Res<Time>,
     state: Res<State<GameState>>,
+    list: Res<AnimationList>,
     mut gameplay_start: ResMut<GameplayStart>,
     mut next_state: ResMut<NextState<GameState>>,
     mut camera: Query<(&Camera2d, &mut Transform)>,
@@ -98,14 +99,14 @@ fn transition_to_gameplay(
             }
         }
     }
-    if gameplay_start.can_start() {
+    if gameplay_start.can_start() && list.is_loaded() {
         next_state.set(state.transition());
     }
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle {
-        transform: Transform::from_translation(Vec3::new(-500.0, 0.0, 1000.0)),
+        transform: Transform::from_translation(Vec3::new(-500.0, 0.0, 100.0)),
         ..default()
     });
     commands.spawn(SpriteBundle {

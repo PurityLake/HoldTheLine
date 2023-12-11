@@ -42,6 +42,12 @@ pub struct AnimationList {
     loaded_players: bool,
 }
 
+impl AnimationList {
+    pub fn is_loaded(&self) -> bool {
+        self.loaded_enemies && self.loaded_players
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Default, Clone, PartialEq)]
 pub enum AnimState {
