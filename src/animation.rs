@@ -236,7 +236,6 @@ fn load_enemy_animations(
             );
             image_handles.insert(name.clone(), texture_atlases.add(texture_atlas));
         }
-        println!("Loaded enemy: {}", enemy.name);
         anim_map.insert(
             enemy.name.clone(),
             AnimationHandles {
