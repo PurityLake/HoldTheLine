@@ -80,6 +80,7 @@ fn setup(
         Collider::cuboid(6.0, 7.0),
         Sensor,
         ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
+        ActiveEvents::COLLISION_EVENTS,
     ));
     player_loaded.loaded = true;
 }
@@ -172,6 +173,7 @@ fn handle_input(
                 RigidBody::KinematicPositionBased,
                 Collider::capsule_y(10.0, 6.0),
                 Sensor,
+                ActiveEvents::COLLISION_EVENTS,
                 ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
             ));
         }

@@ -77,6 +77,7 @@ fn spawn_enemy(
                 Collider::cuboid(6.0, 7.0),
                 Sensor,
                 ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
+                ActiveEvents::COLLISION_EVENTS,
             ));
             spawn_data.curr_spawned += 1;
             spawn_data.curr_time = 0.;
