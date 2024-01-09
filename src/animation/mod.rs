@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use crate::{json::*, GameState};
+use crate::data::{json::*, state::GameState};
 use bevy::prelude::*;
 use serde::Deserialize;
 

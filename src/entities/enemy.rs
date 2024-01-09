@@ -9,8 +9,8 @@ use crate::{
         AnimState, AnimationComponent, AnimationHandles, AnimationList, AnimationListAsset,
         EnemyAnimations, ImagesToLoad,
     },
-    player::GameStats,
-    state::GameState,
+    data::state::GameState,
+    entities::player::GameStats,
     GameplayStart,
 };
 

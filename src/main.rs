@@ -1,17 +1,16 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
 mod animation;
-mod enemy;
-mod json;
-mod player;
-mod state;
+mod data;
+mod entities;
 
+use crate::entities::enemy;
 use animation::{AnimationList, AnimationLoadPlugin};
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowTheme};
 use bevy_rapier2d::prelude::*;
-use enemy::EnemySpawnPlugin;
-use player::PlayerPlugin;
-use state::GameState;
+use data::state::GameState;
+use entities::enemy::EnemySpawnPlugin;
+use entities::player::PlayerPlugin;
 
 #[derive(Resource)]
 pub struct GameplayStart {

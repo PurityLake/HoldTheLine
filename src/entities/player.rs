@@ -2,14 +2,13 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
-use serde::de;
 
 use crate::{
     animation::{
         AnimState, AnimationComponent, AnimationList, AnimationListAsset, ImagesToLoad,
         PlayerAnimation,
     },
-    state::GameState,
+    data::state::GameState,
     GameplayStart,
 };
 
@@ -78,21 +77,11 @@ pub struct PlayerPlugin;
 #[derive(Resource)]
 pub struct PlayerPhysicsAttached(bool);
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct GameStats {
     pub villagers_saved: i32,
     pub villagers_lost: i32,
     pub entites_spawned: i32,
-}
-
-impl Default for GameStats {
-    fn default() -> Self {
-        Self {
-            villagers_saved: 0,
-            villagers_lost: 0,
-            entites_spawned: 0,
-        }
-    }
 }
 
 impl Plugin for PlayerPlugin {
@@ -168,7 +157,6 @@ fn spawn_text(
 }
 
 fn update_text(
-    score: Res<GameStats>,
     asset_server: Res<AssetServer>,
     player_data: Res<PlayerData>,
     mut query: Query<(&mut Text, &EntitiesText)>,
